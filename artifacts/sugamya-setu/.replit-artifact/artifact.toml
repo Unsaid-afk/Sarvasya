@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Sugamya Setu"
+description = "A civic accessibility platform for auditing buildings, publishing transparent compliance reports, exploring accessible indoor routes, and supporting real-time assistive navigation for people with disabilities."
+version = "1.0.0"
+id = "artifacts/sugamya-setu"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23514
+
+[services.development]
+run = "pnpm --filter @workspace/sugamya-setu run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sugamya-setu", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sugamya-setu/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23514"
+BASE_PATH = "/"

@@ -1,6 +1,6 @@
-# [Project name]
+# Sugamya Setu
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Sugamya Setu is a civic accessibility platform for checking building plans, publishing transparent audit records, and helping people navigate public buildings with confidence.
 
 ## Run & Operate
 
@@ -22,23 +22,36 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/sugamya-setu/src/App.tsx` — responsive dashboard, building detail, compliance checker, field inspection, wayfinding, and accessibility controls
+- `artifacts/sugamya-setu/src/index.css` — civic visual language, responsive layout, keyboard focus states, high-contrast and inversion modes
+- `artifacts/api-server/src/routes/buildings.ts` — public building register, dashboard summary, compliance records, and indoor wayfinding seed data
+- `artifacts/api-server/src/routes/compliance.ts` — compliance rule engine and field audit submission endpoints
+- `lib/api-spec/openapi.yaml` — source of truth for generated API hooks and validation schemas
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The first release uses a small in-memory public register so the demo is immediately usable without external setup; the API shapes are ready to move into PostgreSQL-backed persistence.
+- The compliance checker is intentionally deterministic and explainable: each gap maps to a reference and a concrete recommendation.
+- Wayfinding is represented as accessible, selectable map checkpoints and a browser-native assistive camera mode, keeping the MVP useful without a third-party map key.
+- Accessibility controls live in the shared shell so read-aloud, high contrast, and inversion are available on every route.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Public directory with search, status filtering, star ratings, and audit freshness
+- Transparent building records with AI-style compliance gaps and independent field reports
+- Architect submission flow with blueprint attachment and rule-based checks
+- Auditor field inspection submission flow
+- Indoor wayfinding with checkpoint status and simulated assistive camera guidance
+- Native browser read-aloud, high-contrast, and color inversion controls
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+No additional preferences recorded.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Use the generated API client from `@workspace/api-client-react` for frontend API access.
+- The artifact workflow supplies `PORT` and `BASE_PATH`; use the managed workflow for preview and runtime checks.
 
 ## Pointers
 

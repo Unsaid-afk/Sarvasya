@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: buildings
+    description: Public building directory and accessibility data
+  - name: compliance
+    description: Blueprint compliance checking and auditor submissions
 paths:
   /healthz:
     get:
@@ -24,6 +28,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /buildings:
+    get:
+      operationId: listBuildings
+      tags: [buildings]
+      summary: List accessible buildings
+      parameters:
+        - in: query
+          name: query
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [all, green, amber, red]
+      responses:
+        "200":
+          description: Building directory
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Building"
+  /buildings/{id}:
+    get:
+      operationId: getBuilding
+      tags: [buildings]
+      summary: Get a building and its transparency record
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Building detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuildingDetail"
+        "404":
+          description: Building not found
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [buildings]
+      summary: Get public dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /compliance/check:
+    post:
+      operationId: runComplianceCheck
+      tags: [compliance]
+      summary: Run the accessibility rule engine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplianceInput"
+      responses:
+        "200":
+          description: Compliance gap report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceReport"
+  /audits:
+    post:
+      operationId: submitAudit
+      tags: [compliance]
+      summary: Submit a field audit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuditInput"
+      responses:
+        "201":
+          description: Submitted audit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Audit"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +129,111 @@ components:
           type: string
       required:
         - status
+    Building:
+      type: object
+      required: [id, name, address, builder, rating, status, lastAudit, accessibleFeatures, coordinates]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        address: { type: string }
+        builder: { type: string }
+        rating: { type: number }
+        status:
+          type: string
+          enum: [green, amber, red]
+        lastAudit: { type: string }
+        accessibleFeatures:
+          type: array
+          items: { type: string }
+        coordinates:
+          type: object
+          required: [lat, lng]
+          properties:
+            lat: { type: number }
+            lng: { type: number }
+    Gap:
+      type: object
+      required: [id, title, severity, reference, recommendation]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        severity:
+          type: string
+          enum: [critical, moderate, minor]
+        reference: { type: string }
+        recommendation: { type: string }
+    ComplianceReport:
+      type: object
+      required: [score, rating, summary, gaps, checkedAt]
+      properties:
+        score: { type: number }
+        rating: { type: number }
+        summary: { type: string }
+        checkedAt: { type: string }
+        gaps:
+          type: array
+          items: { $ref: "#/components/schemas/Gap" }
+    Audit:
+      type: object
+      required: [id, auditorName, submittedAt, status, summary]
+      properties:
+        id: { type: string }
+        auditorName: { type: string }
+        submittedAt: { type: string }
+        status:
+          type: string
+          enum: [verified, pending]
+        summary: { type: string }
+    BuildingDetail:
+      allOf:
+        - $ref: "#/components/schemas/Building"
+        - type: object
+          required: [report, auditor, audit, wayfinding]
+          properties:
+            report: { $ref: "#/components/schemas/ComplianceReport" }
+            auditor: { type: string }
+            audit: { $ref: "#/components/schemas/Audit" }
+            wayfinding:
+              type: array
+              items:
+                type: object
+                required: [id, label, type, status, x, y, note]
+                properties:
+                  id: { type: string }
+                  label: { type: string }
+                  type: { type: string }
+                  status:
+                    type: string
+                    enum: [open, limited, closed]
+                  x: { type: number }
+                  y: { type: number }
+                  note: { type: string }
+    DashboardSummary:
+      type: object
+      required: [buildings, verified, openGaps, averageRating, updatedAt]
+      properties:
+        buildings: { type: number }
+        verified: { type: number }
+        openGaps: { type: number }
+        averageRating: { type: number }
+        updatedAt: { type: string }
+    ComplianceInput:
+      type: object
+      required: [builderName, buildingName, rampSlope, doorWidth, liftAvailable, accessibleRestrooms, tactilePath]
+      properties:
+        builderName: { type: string, minLength: 1 }
+        buildingName: { type: string, minLength: 1 }
+        rampSlope: { type: number }
+        doorWidth: { type: number }
+        liftAvailable: { type: boolean }
+        accessibleRestrooms: { type: boolean }
+        tactilePath: { type: boolean }
+        blueprintName: { type: string }
+    AuditInput:
+      type: object
+      required: [buildingId, auditorName, summary]
+      properties:
+        buildingId: { type: string }
+        auditorName: { type: string, minLength: 1 }
+        summary: { type: string, minLength: 1 }
 

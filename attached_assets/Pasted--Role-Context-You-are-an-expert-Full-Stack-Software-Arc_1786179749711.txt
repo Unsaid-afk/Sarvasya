@@ -1,0 +1,44 @@
+# Role & Context
+You are an expert Full-Stack Software Architect, UI/UX Designer, and Accessibility Specialist. You are building the production-ready Minimum Viable Product (MVP) for **"Sugamya-Setu" (Project Access-India)**—a comprehensive, high-performance web platform that bridges the gap between architectural compliance, public transparency, and real-time assistive navigation for Persons with Disabilities (PwDs).
+
+The application must be exceptionally polished, fully functional, visually stunning (modern corporate-civic SaaS aesthetic), and strictly compliant with global digital accessibility standards (WCAG 2.1 Level AA).
+
+---
+
+# Technical Stack Requirements
+* **Frontend:** Next.js (React) with Tailwind CSS for rapid, responsive styling and server-side rendering performance.
+* **Icons & UI Components:** Lucide React icons, clean modular components, and custom accessible interactive wrappers.
+* **Mapping Engine:** Leaflet.js / React-Leaflet integrated with custom indoor floor plan SVG/image overlays.
+* **Speech & Accessibility:** Native browser `window.speechSynthesis` API for the inbuilt screen reader, combined with complete ARIA landmarks and semantic markup.
+* **State & Backend Mocking:** LocalStorage / Context API combined with a structured relational database schema design (Supabase/Firebase ready) to ensure all CRUD operations, comparisons, and live map states work seamlessly out of the box.
+
+---
+
+# Core Feature Modules to Implement (The Complete MVP)
+
+## Module 1: The Blueprint Compliance & Audit Engine
+* **Architect Portal:** A clean submission form where architects upload building blueprints (PDF/CAD mock upload) and input structural specs (e.g., ramp slope, door width, lift availability).
+* **Automated AI Checker:** A rule-engine simulator that cross-references inputs against accessibility laws (RPwD Act / National Building Code standards) and instantly generates a structured **AI Compliance Gap Report** highlighting missing items (Critical, Moderate, Minor).
+* **Auditor Portal:** A parallel section where independent third-party auditors upload their field inspection reports.
+* **Public Transparency Ledger:** A side-by-side comparison view displaying the **Builder Name, Auditor Name, AI-Generated Report, and Auditor Field Report** transparently to the public, preventing paper-only compliance.
+
+## Module 2: The Star-Rating System & Public Dashboard
+* **Dynamic Rating Engine:** Every registered building receives an automated **1 to 5 Star Accessibility Rating** calculated dynamically based on resolved vs. unresolved critical gaps.
+* **Search & Filter Directory:** A clean public directory where citizens can search buildings, view their 5-star ratings, and check live audit statuses (Red/Amber/Green).
+
+## Module 3: Universal Web Accessibility & Inbuilt Screen Reader
+* **WCAG Compliance:** Fully semantic HTML architecture (`<nav>`, `<main>`, `<article>`, `<button>`), visible keyboard focus indicators (`focus:ring-2`), and high-contrast color ratios.
+* **Inbuilt Screen Reader Toolbar:** A floating or fixed accessibility widget on the website featuring a **"Read Aloud"** toggle button. When clicked, it uses the browser's speech synthesis engine to read selected text blocks, audit reports, or navigation instructions out loud natively inside the app.
+* **Visual Toggles:** Built-in toggles for **High Contrast Mode** and **Color Inversion** that instantly transform the DOM styling without breaking layout components.
+
+## Module 4: The Dual-Mode Live Building Map
+* **Mode 1: Normal Map Mode:** An interactive indoor floor plan map (powered by Leaflet.js) showing real-time pins for elevators, ramps, and restrooms with live color status. Clicking a pin opens its audit history and star rating.
+* **Mode 2: Video Navigation Mode (Simulated Assistive AR View):** A live camera feed interface (`navigator.mediaDevices.getUserMedia`) rendered inside the app. Overlay text and real-time audio announcements simulate spatial guidance (e.g., *"Proceed 5 meters straight: Accessible ramp ahead to your left"*), utilizing browser speech synthesis to narrate detected checkpoints dynamically.
+
+---
+
+# Deliverables Expected
+Write clean, modular, production-ready code with zero placeholder comments or missing logic. Provide:
+1. **Directory Structure Overview**
+2. **Complete Source Code / Component Files** for the core layouts, compliance comparison view, inbuilt screen reader hook, and the dual-mode live map interface.
+3. **Clear Instructions** on how to run and test the MVP locally.
