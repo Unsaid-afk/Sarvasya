@@ -80,10 +80,10 @@
     ]
   },
   {
-    "id": "pune-civic-centre",
-    "name": "Pune Civic Centre",
-    "address": "Shivajinagar, Pune, Maharashtra",
-    "builder": "Pune Municipal Corporation",
+    "id": "vadodara-civic-centre",
+    "name": "Vadodara Civic Centre",
+    "address": "Shivajinagar, Vadodara, Maharashtra",
+    "builder": "Vadodara Municipal Corporation",
     "rating": 3.8,
     "status": "amber",
     "lastAudit": "28 May 2026",

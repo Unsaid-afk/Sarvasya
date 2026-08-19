@@ -34,8 +34,8 @@ const INITIAL_BUILDINGS = [
   {
     id: "apex-hospital",
     name: "Apex Care Hospital",
-    address: "Shivajinagar, Ward 15, Pune, Maharashtra",
-    builder: "Pune Health Infrastructure",
+    address: "Shivajinagar, Ward 15, Vadodara, Maharashtra",
+    builder: "Vadodara Health Infrastructure",
     rating: 4.8,
     status: "green" as const,
     lastAudit: "10 Aug 2026",
@@ -65,9 +65,9 @@ const INITIAL_BUILDINGS = [
   },
   {
     id: "vidhan-bhavan",
-    name: "Pune Ward 15 Office",
-    address: "Shivajinagar, Pune, Maharashtra",
-    builder: "Pune Municipal Corporation",
+    name: "Vadodara Ward 15 Office",
+    address: "Shivajinagar, Vadodara, Maharashtra",
+    builder: "Vadodara Municipal Corporation",
     rating: 4.7,
     status: "green" as const,
     lastAudit: "12 Jun 2026",
@@ -105,10 +105,10 @@ const INITIAL_BUILDINGS = [
     ],
   },
   {
-    id: "pune-civic-centre",
-    name: "Pune Civic Centre",
-    address: "Shivajinagar, Pune, Maharashtra",
-    builder: "Pune Municipal Corporation",
+    id: "vadodara-civic-centre",
+    name: "Vadodara Civic Centre",
+    address: "Shivajinagar, Vadodara, Maharashtra",
+    builder: "Vadodara Municipal Corporation",
     rating: 3.8,
     status: "amber" as const,
     lastAudit: "28 May 2026",
@@ -155,8 +155,8 @@ const INITIAL_BUILDINGS = [
   {
     id: "shivajinagar-library",
     name: "Shivajinagar Community Library",
-    address: "Shivajinagar, Pune, Maharashtra",
-    builder: "Pune Urban Development",
+    address: "Shivajinagar, Vadodara, Maharashtra",
+    builder: "Vadodara Urban Development",
     rating: 2.9,
     status: "red" as const,
     lastAudit: "04 Apr 2026",
@@ -224,8 +224,8 @@ const INITIAL_COMPLAINTS = [
   },
   {
     id: "COMP-102",
-    buildingId: "pune-civic-centre",
-    buildingName: "Pune Civic Centre",
+    buildingId: "vadodara-civic-centre",
+    buildingName: "Vadodara Civic Centre",
     category: "Washroom Clearance",
     details: "Washroom is filled with maintenance cleaning supplies preventing wheelchair access.",
     status: "Resolved",
@@ -237,9 +237,9 @@ const INITIAL_COMPLAINTS = [
 ];
 
 const INITIAL_NGOs = [
-  { id: "ngo-1", name: "NCPEDP local chapter", type: "NGO", focus: "Accessibility audits & aid kits", address: "Shivajinagar, Pune", tasks: ["Audit assistant", "Record digitisation"] },
-  { id: "ngo-2", name: "Samarthyam", type: "NGO", focus: "PwD community representation", address: "Shivajinagar, Pune", tasks: ["Companion walk", "Reading assistant"] },
-  { id: "ngo-3", name: "AccessAbility", type: "NGO", focus: "Community outreach & awareness", address: "Shivajinagar, Pune", tasks: ["Event coordination", "Sign language support"] },
+  { id: "ngo-1", name: "NCPEDP local chapter", type: "NGO", focus: "Accessibility audits & aid kits", address: "Shivajinagar, Vadodara", tasks: ["Audit assistant", "Record digitisation"] },
+  { id: "ngo-2", name: "Samarthyam", type: "NGO", focus: "PwD community representation", address: "Shivajinagar, Vadodara", tasks: ["Companion walk", "Reading assistant"] },
+  { id: "ngo-3", name: "AccessAbility", type: "NGO", focus: "Community outreach & awareness", address: "Shivajinagar, Vadodara", tasks: ["Event coordination", "Sign language support"] },
 ];
 
 const HELPLINE_DIRECTORY = [

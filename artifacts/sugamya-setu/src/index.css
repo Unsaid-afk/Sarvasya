@@ -211,7 +211,7 @@
   padding: .55rem .7rem;
   color: hsl(var(--foreground));
   font-family: var(--app-font-mono);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: .04em;
   text-transform: uppercase;
