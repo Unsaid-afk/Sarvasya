@@ -34,7 +34,7 @@ const INITIAL_BUILDINGS = [
   {
     id: "apex-hospital",
     name: "Apex Care Hospital",
-    address: "Shivajinagar, Ward 15, Vadodara, Maharashtra",
+    address: "Alkapuri, Ward 15, Vadodara, Gujarat",
     builder: "Vadodara Health Infrastructure",
     rating: 4.8,
     status: "green" as const,
@@ -66,7 +66,7 @@ const INITIAL_BUILDINGS = [
   {
     id: "vidhan-bhavan",
     name: "Vadodara Ward 15 Office",
-    address: "Shivajinagar, Vadodara, Maharashtra",
+    address: "Alkapuri, Vadodara, Gujarat",
     builder: "Vadodara Municipal Corporation",
     rating: 4.7,
     status: "green" as const,
@@ -107,7 +107,7 @@ const INITIAL_BUILDINGS = [
   {
     id: "vadodara-civic-centre",
     name: "Vadodara Civic Centre",
-    address: "Shivajinagar, Vadodara, Maharashtra",
+    address: "Alkapuri, Vadodara, Gujarat",
     builder: "Vadodara Municipal Corporation",
     rating: 3.8,
     status: "amber" as const,
@@ -153,9 +153,9 @@ const INITIAL_BUILDINGS = [
     ],
   },
   {
-    id: "shivajinagar-library",
-    name: "Shivajinagar Community Library",
-    address: "Shivajinagar, Vadodara, Maharashtra",
+    id: "alkapuri-library",
+    name: "Alkapuri Community Library",
+    address: "Alkapuri, Vadodara, Gujarat",
     builder: "Vadodara Urban Development",
     rating: 2.9,
     status: "red" as const,
@@ -212,8 +212,8 @@ const INITIAL_BUILDINGS = [
 const INITIAL_COMPLAINTS = [
   {
     id: "COMP-101",
-    buildingId: "shivajinagar-library",
-    buildingName: "Shivajinagar Community Library",
+    buildingId: "alkapuri-library",
+    buildingName: "Alkapuri Community Library",
     category: "Ramp Slope",
     details: "The ramp is extremely steep, making it impossible for manual wheelchair users to climb safely.",
     status: "In Progress",
@@ -237,9 +237,9 @@ const INITIAL_COMPLAINTS = [
 ];
 
 const INITIAL_NGOs = [
-  { id: "ngo-1", name: "NCPEDP local chapter", type: "NGO", focus: "Accessibility audits & aid kits", address: "Shivajinagar, Vadodara", tasks: ["Audit assistant", "Record digitisation"] },
-  { id: "ngo-2", name: "Samarthyam", type: "NGO", focus: "PwD community representation", address: "Shivajinagar, Vadodara", tasks: ["Companion walk", "Reading assistant"] },
-  { id: "ngo-3", name: "AccessAbility", type: "NGO", focus: "Community outreach & awareness", address: "Shivajinagar, Vadodara", tasks: ["Event coordination", "Sign language support"] },
+  { id: "ngo-1", name: "NCPEDP local chapter", type: "NGO", focus: "Accessibility audits & aid kits", address: "Alkapuri, Vadodara", tasks: ["Audit assistant", "Record digitisation"] },
+  { id: "ngo-2", name: "Samarthyam", type: "NGO", focus: "PwD community representation", address: "Alkapuri, Vadodara", tasks: ["Companion walk", "Reading assistant"] },
+  { id: "ngo-3", name: "AccessAbility", type: "NGO", focus: "Community outreach & awareness", address: "Alkapuri, Vadodara", tasks: ["Event coordination", "Sign language support"] },
 ];
 
 const HELPLINE_DIRECTORY = [

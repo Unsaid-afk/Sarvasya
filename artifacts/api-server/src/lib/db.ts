@@ -14,8 +14,8 @@ const initialBuildings: BuildingRecord[] = [
   {
     id: "vidhan-bhavan",
     name: "Vidhan Bhavan Public Services",
-    address: "Nariman Point, Mumbai, Maharashtra",
-    builder: "Maharashtra Public Works",
+    address: "Nariman Point, Mumbai, Gujarat",
+    builder: "Gujarat Public Works",
     rating: 4.7,
     status: "green",
     lastAudit: "12 Jun 2026",
@@ -54,7 +54,7 @@ const initialBuildings: BuildingRecord[] = [
   {
     id: "vadodara-civic-centre",
     name: "Vadodara Civic Centre",
-    address: "Shivajinagar, Vadodara, Maharashtra",
+    address: "Alkapuri, Vadodara, Gujarat",
     builder: "Vadodara Municipal Corporation",
     rating: 3.8,
     status: "amber",
