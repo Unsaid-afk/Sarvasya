@@ -394,6 +394,29 @@ function Shell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    let watchId: number;
+    if (trackingActive && 'geolocation' in navigator) {
+      setTrackingLocation("Acquiring GPS signal...");
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          setTrackingLocation(`Lat: ${position.coords.latitude.toFixed(5)}, Lng: ${position.coords.longitude.toFixed(5)}`);
+        },
+        (error) => {
+          setTrackingLocation("Location access denied or unavailable");
+        },
+        { enableHighAccuracy: true }
+      );
+    } else if (!trackingActive) {
+      setTrackingLocation("Lobby Ramp Entry");
+    }
+    return () => {
+      if (watchId !== undefined) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [trackingActive]);
+
+  useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('high-contrast', highContrast);
     root.classList.toggle('color-inverted', inverted);
