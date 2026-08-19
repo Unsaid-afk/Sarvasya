@@ -32,10 +32,10 @@ const navItems = [
 // Offline & Local Storage Mock Database Setup
 const INITIAL_BUILDINGS = [
   {
-    id: "apex-hospital",
-    name: "Apex Care Hospital",
-    address: "Alkapuri, Ward 15, Vadodara, Gujarat",
-    builder: "Vadodara Health Infrastructure",
+    id: "ssg-hospital",
+    name: "Sir Sayajirao General (SSG) Hospital",
+    address: "Jail Road, Anandpura, Vadodara, Gujarat",
+    builder: "Dept of Health, Govt of Gujarat",
     rating: 4.8,
     status: "green" as const,
     lastAudit: "10 Aug 2026",
@@ -283,7 +283,7 @@ function useMockDB() {
   const [safeSpots, setSafeSpots] = useState<any[]>(() => {
     const cached = localStorage.getItem("sarvasya_safespots");
     return cached ? JSON.parse(cached) : [
-      { id: "ss-1", name: "Apex Care Lobby Refuge Area", buildingId: "apex-hospital", note: "Fitted with fireproof door and wheelchair parking." }
+      { id: "ss-1", name: "SSG Hospital Lobby Refuge Area", buildingId: "ssg-hospital", note: "Fitted with fireproof door and wheelchair parking." }
     ];
   });
 
@@ -543,7 +543,7 @@ function Shell({ children }: { children: ReactNode }) {
       {/* Silent emergency broadcast banner */}
       {emergencyAlert && (
         <div className="bg-red-600 text-white p-4 px-6 font-bold text-center text-sm pulse-emergency flex items-center justify-center gap-3">
-          <AlertOctagon /> SILENT EMERGENCY BROADCAST: Location and aid requested at Apex Care Lobby Refuge Area! Volunteers notified.
+          <AlertOctagon /> SILENT EMERGENCY BROADCAST: Location and aid requested at SSG Hospital Lobby Refuge Area! Volunteers notified.
         </div>
       )}
 
