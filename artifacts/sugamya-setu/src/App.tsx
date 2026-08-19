@@ -359,7 +359,7 @@ function Shell({ children }: { children: ReactNode }) {
   const [reading, setReading] = useState(false);
   
   // Accessibility scale and colorblind themes
-  const [textSize, setTextSize] = useState<'sm' | 'base' | 'lg'>('base');
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [colorblindTheme, setColorblindTheme] = useState<'none' | 'deuteranopia' | 'tritanopia'>('none');
   
   // Emergency and remote tracking state
@@ -398,9 +398,8 @@ function Shell({ children }: { children: ReactNode }) {
     root.classList.toggle('high-contrast', highContrast);
     root.classList.toggle('color-inverted', inverted);
     
-    // Set scale class
-    root.classList.remove('text-size-sm', 'text-size-base', 'text-size-lg');
-    root.classList.add(`text-size-${textSize}`);
+    // Set scale
+    root.style.fontSize = `${15 * (zoomLevel / 100)}px`;
 
     // Set colorblind theme
     root.classList.remove('colorblind-deuteranopia', 'colorblind-tritanopia');
@@ -410,9 +409,10 @@ function Shell({ children }: { children: ReactNode }) {
 
     return () => {
       root.classList.remove('high-contrast', 'color-inverted', 'text-size-sm', 'text-size-base', 'text-size-lg', 'colorblind-deuteranopia', 'colorblind-tritanopia');
+      root.style.fontSize = '';
       window.speechSynthesis?.cancel();
     };
-  }, [highContrast, inverted, textSize, colorblindTheme]);
+  }, [highContrast, inverted, zoomLevel, colorblindTheme]);
 
   const readPage = () => {
     if (!('speechSynthesis' in window)) return;
@@ -552,10 +552,11 @@ function Shell({ children }: { children: ReactNode }) {
       {/* Enhanced Accessibility & Assistive Action Toolbars */}
       <div className="accessibility-toolbar flex-wrap gap-2 md:max-w-4xl" aria-label="Accessibility and Safety tools">
         {/* Font controls */}
-        <div className="flex border-r border-[hsl(var(--border))] pr-2 mr-1">
-          <button type="button" onClick={() => setTextSize('sm')} aria-pressed={textSize === 'sm'} title="Small text"><span className="text-[10px]">A-</span></button>
-          <button type="button" onClick={() => setTextSize('base')} aria-pressed={textSize === 'base'} title="Normal text"><span className="text-xs">A</span></button>
-          <button type="button" onClick={() => setTextSize('lg')} aria-pressed={textSize === 'lg'} title="Large text"><span className="text-sm">A+</span></button>
+        <div className="flex border-r border-[hsl(var(--border))] pr-2 mr-1 items-center gap-1">
+          <button type="button" onClick={() => setZoomLevel(z => Math.max(10, z - 10))} title="Zoom out"><span className="text-[10px]">A-</span></button>
+          <span className="text-[9px] font-mono px-1">{zoomLevel}%</span>
+          <button type="button" onClick={() => setZoomLevel(z => z + 10)} title="Zoom in"><span className="text-sm">A+</span></button>
+          <button type="button" onClick={() => setZoomLevel(100)} title="Reset zoom" className="ml-1 text-[9px] underline">Reset</button>
         </div>
 
         {/* Colorblind Dropdown */}
