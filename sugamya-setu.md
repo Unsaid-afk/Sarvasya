@@ -1,6 +1,6 @@
-# Sugamya Setu
+# Sarvasya
 
-Sugamya Setu is a civic accessibility platform for checking building plans, publishing transparent audit records, and helping people navigate public buildings with confidence.
+Sarvasya is a civic accessibility platform for checking building plans, publishing transparent audit records, and helping people navigate public buildings with confidence.
 
 ## Run & Operate
 
@@ -47,6 +47,20 @@ Sugamya Setu is a civic accessibility platform for checking building plans, publ
 ## User preferences
 
 No additional preferences recorded.
+
+## Costing Estimate (Pilot)
+
+| Item | Cost (INR) |
+| :--- | :--- |
+| **Cloud hosting** (1 year) | ₹36,000 |
+| **Audit kits × 5** (measuring tape, inclinometer, clipboard) | ₹5,000 |
+| **QR posters & printed awareness material** | ₹8,000 |
+| **Travel & field expenses** (pilot ward, 90 days) | ₹15,000 |
+| **Student auditor stipends** (3 × ₹3,000/mo × 3 mo) | ₹27,000 |
+| **Miscellaneous** (SIM data packs, printing, contingency) | ₹9,000 |
+| **Total Pilot Cost** | **₹1,00,000** (approx.) |
+
+*Note: The solution is built on open-source tools (React, Vite, Express) with zero licensing costs, and the MVP website already runs offline.*
 
 ## Gotchas
 

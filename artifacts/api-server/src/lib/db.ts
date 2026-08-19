@@ -1,55 +1,16 @@
-import { Router, type IRouter } from "express";
-import {
-  GetBuildingParams,
-  GetBuildingResponse,
-  GetDashboardSummaryResponse,
-  ListBuildingsQueryParams,
-  ListBuildingsResponse,
-} from "@workspace/api-zod";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { type BuildingRecord } from "../routes/buildings";
 
-export type BuildingRecord = {
-  id: string;
-  name: string;
-  address: string;
-  builder: string;
-  rating: number;
-  status: "green" | "amber" | "red";
-  lastAudit: string;
-  accessibleFeatures: string[];
-  coordinates: { lat: number; lng: number };
-  report: {
-    score: number;
-    rating: number;
-    summary: string;
-    gaps: Array<{
-      id: string;
-      title: string;
-      severity: "critical" | "moderate" | "minor";
-      reference: string;
-      recommendation: string;
-    }>;
-    checkedAt: string;
-  };
-  auditor: string;
-  audit: {
-    id: string;
-    auditorName: string;
-    submittedAt: string;
-    status: "verified" | "pending";
-    summary: string;
-  };
-  wayfinding: Array<{
-    id: string;
-    label: string;
-    type: string;
-    status: "open" | "limited" | "closed";
-    x: number;
-    y: number;
-    note: string;
-  }>;
-};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-export const buildings: BuildingRecord[] = [
+// Store database file in a data directory under artifacts/api-server
+const DB_DIR = path.resolve(__dirname, "../../data");
+const DB_FILE = path.resolve(DB_DIR, "db.json");
+
+const initialBuildings: BuildingRecord[] = [
   {
     id: "vidhan-bhavan",
     name: "Vidhan Bhavan Public Services",
@@ -193,53 +154,25 @@ export const buildings: BuildingRecord[] = [
   },
 ];
 
-import { getBuildings } from "../lib/db";
-
-const router: IRouter = Router();
-
-router.get("/buildings", (req, res): void => {
-  const parsed = ListBuildingsQueryParams.safeParse(req.query);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
+export function getBuildings(): BuildingRecord[] {
+  if (!fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
   }
-
-  const query = parsed.data.query?.toLowerCase().trim();
-  const status = parsed.data.status;
-  const currentBuildings = getBuildings();
-  const result = currentBuildings.filter((building) => {
-    const matchesQuery = !query || `${building.name} ${building.address}`.toLowerCase().includes(query);
-    const matchesStatus = !status || status === "all" || building.status === status;
-    return matchesQuery && matchesStatus;
-  });
-  res.json(ListBuildingsResponse.parse(result));
-});
-
-router.get("/buildings/:id", (req, res): void => {
-  const params = GetBuildingParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
+  if (!fs.existsSync(DB_FILE)) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(initialBuildings, null, 2), "utf8");
+    return initialBuildings;
   }
-  const currentBuildings = getBuildings();
-  const building = currentBuildings.find((item) => item.id === params.data.id);
-  if (!building) {
-    res.status(404).json({ error: "Building not found" });
-    return;
+  try {
+    const raw = fs.readFileSync(DB_FILE, "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return initialBuildings;
   }
-  res.json(GetBuildingResponse.parse(building));
-});
+}
 
-router.get("/dashboard/summary", (_req, res): void => {
-  const currentBuildings = getBuildings();
-  const result = {
-    buildings: currentBuildings.length,
-    verified: currentBuildings.filter((building) => building.audit.status === "verified").length,
-    openGaps: currentBuildings.reduce((count, building) => count + building.report.gaps.length, 0),
-    averageRating: Number((currentBuildings.reduce((sum, building) => sum + building.rating, 0) / currentBuildings.length).toFixed(1)),
-    updatedAt: "2026-08-08T09:42:00+05:30",
-  };
-  res.json(GetDashboardSummaryResponse.parse(result));
-});
-
-export default router;
+export function saveBuildings(data: BuildingRecord[]): void {
+  if (!fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+  }
+  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf8");
+}

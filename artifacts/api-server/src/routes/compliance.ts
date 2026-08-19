@@ -77,13 +77,16 @@ router.post("/compliance/check", (req, res): void => {
   res.json(RunComplianceCheckResponse.parse(report));
 });
 
+import { getBuildings, saveBuildings } from "../lib/db";
+
 router.post("/audits", (req, res): void => {
   const parsed = SubmitAuditBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const building = buildings.find((item) => item.id === parsed.data.buildingId);
+  const currentBuildings = getBuildings();
+  const building = currentBuildings.find((item) => item.id === parsed.data.buildingId);
   if (!building) {
     res.status(404).json({ error: "Building not found" });
     return;
@@ -91,12 +94,15 @@ router.post("/audits", (req, res): void => {
   const audit = {
     id: `audit-${Date.now()}`,
     auditorName: parsed.data.auditorName,
-    submittedAt: "08 Aug 2026",
+    submittedAt: new Date().toISOString(),
     status: "pending" as const,
     summary: parsed.data.summary,
   };
   building.audit = audit;
   building.auditor = parsed.data.auditorName;
+  
+  saveBuildings(currentBuildings);
+  
   res.status(201).json(SubmitAuditResponse.parse(audit));
 });
 
