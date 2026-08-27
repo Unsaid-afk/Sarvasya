@@ -1,27 +1,57 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import { type BuildingRecord } from "../routes/buildings";
+import type { Complaint, Ngo, VolunteerBooking, SafeSpot } from "@workspace/api-zod";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Store database file in a data directory under artifacts/api-server
-const DB_DIR = path.resolve(__dirname, "../../data");
+// Use process.cwd() for reliable path resolution in both ESM and CJS bundles
+const DB_DIR = path.resolve(process.cwd(), "data");
 const DB_FILE = path.resolve(DB_DIR, "db.json");
 
 const initialBuildings: BuildingRecord[] = [
   {
+    id: "ssg-hospital",
+    name: "Sir Sayajirao General (SSG) Hospital",
+    address: "Jail Road, Anandpura, Vadodara, Gujarat",
+    builder: "Dept of Health, Govt of Gujarat",
+    rating: 4.8,
+    status: "green",
+    lastAudit: "10 Aug 2026",
+    accessibleFeatures: ["Step-free entry", "Tactile path", "Braille lift", "Accessible restroom", "Emergency alarm in toilets"],
+    coordinates: { lat: 22.3072, lng: 73.1812 },
+    auditor: "National Access Audit Association",
+    category: "hospital",
+    report: {
+      score: 98,
+      rating: 4.8,
+      summary: "Excellent compliance with NBC 2016. Braille directional maps installed at reception.",
+      checkedAt: "10 Aug 2026",
+      gaps: [],
+    },
+    audit: {
+      id: "audit-apex-01",
+      auditorName: "National Access Audit Association",
+      submittedAt: "10 Aug 2026",
+      status: "verified",
+      summary: "Verified all parameters on-site. Accessible restrooms have grab rails at 750mm height.",
+    },
+    wayfinding: [
+      { id: "entrance", label: "Main entrance ramp", type: "ramp", status: "open", x: 20, y: 80, note: "Ramp with 1:12 slope and double handrails." },
+      { id: "lift", label: "Central elevator bank", type: "lift", status: "open", x: 50, y: 40, note: "Fitted with voice announcement and Braille keys." },
+      { id: "restroom", label: "Ground floor accessible washroom", type: "restroom", status: "open", x: 80, y: 30, note: "Sliding door with grab rails." },
+    ],
+  },
+  {
     id: "vidhan-bhavan",
-    name: "Vidhan Bhavan Public Services",
-    address: "Nariman Point, Mumbai, Gujarat",
-    builder: "Gujarat Public Works",
+    name: "Vadodara Ward 15 Office",
+    address: "Alkapuri, Vadodara, Gujarat",
+    builder: "Vadodara Municipal Corporation",
     rating: 4.7,
     status: "green",
     lastAudit: "12 Jun 2026",
     accessibleFeatures: ["Step-free entry", "Tactile path", "Induction loop", "Accessible restroom"],
-    coordinates: { lat: 18.925, lng: 72.823 },
+    coordinates: { lat: 22.3106, lng: 73.1747 },
     auditor: "AccessWorks India",
+    category: "government",
     report: {
       score: 94,
       rating: 4.7,
@@ -60,8 +90,9 @@ const initialBuildings: BuildingRecord[] = [
     status: "amber",
     lastAudit: "28 May 2026",
     accessibleFeatures: ["Step-free entry", "Accessible parking", "Lift access"],
-    coordinates: { lat: 18.531, lng: 73.844 },
+    coordinates: { lat: 22.3119, lng: 73.1756 },
     auditor: "Inclusive Routes Collective",
+    category: "government",
     report: {
       score: 76,
       rating: 3.8,
@@ -99,16 +130,17 @@ const initialBuildings: BuildingRecord[] = [
     ],
   },
   {
-    id: "koramangala-library",
-    name: "Koramangala Community Library",
-    address: "Koramangala, Bengaluru, Karnataka",
-    builder: "Bengaluru Urban Development",
+    id: "alkapuri-library",
+    name: "Alkapuri Community Library",
+    address: "Alkapuri, Vadodara, Gujarat",
+    builder: "Vadodara Urban Development",
     rating: 2.9,
     status: "red",
     lastAudit: "04 Apr 2026",
     accessibleFeatures: ["Ground-floor service desk", "Accessible parking"],
-    coordinates: { lat: 12.935, lng: 77.624 },
+    coordinates: { lat: 22.3098, lng: 73.1785 },
     auditor: "Open Access Bengaluru",
+    category: "library",
     report: {
       score: 58,
       rating: 2.9,
@@ -154,25 +186,68 @@ const initialBuildings: BuildingRecord[] = [
   },
 ];
 
-export function getBuildings(): BuildingRecord[] {
+type DBState = {
+  buildings: BuildingRecord[];
+  complaints: Complaint[];
+  ngos: Ngo[];
+  volunteerBookings: VolunteerBooking[];
+  safeSpots: SafeSpot[];
+};
+
+const defaultState: DBState = {
+  buildings: initialBuildings,
+  complaints: [],
+  ngos: [
+    { id: "ngo-1", name: "Sarthak Prayas", type: "Disability NGO", focus: "Mobility aids", address: "Navrangpura, Ahmedabad", tasks: ["Distribute wheelchairs", "Assist at medical camp", "Teach basic sign language"] },
+    { id: "ngo-2", name: "Anand Vrudhashram", type: "Old Age Home", focus: "Elder care", address: "Waghodia Road, Vadodara", tasks: ["Read to residents", "Organize musical evening", "Serve meals"] },
+    { id: "ngo-3", name: "Udaan Foundation", type: "Special Needs School", focus: "Education", address: "Koramangala, Bengaluru", tasks: ["Help with art class", "Campus cleaning", "Exam scribe"] }
+  ],
+  volunteerBookings: [],
+  safeSpots: [
+    { id: "spot-1", name: "North Wing Refuge Area", buildingId: "ssg-hospital", note: "Fireproof doors. Oxygen masks available in red bin." },
+    { id: "spot-2", name: "Ground Floor Atrium", buildingId: "vadodara-civic-centre", note: "Clear of glass windows. Stretcher access available." }
+  ]
+};
+
+export function getDB(): DBState {
   if (!fs.existsSync(DB_DIR)) {
     fs.mkdirSync(DB_DIR, { recursive: true });
   }
   if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(initialBuildings, null, 2), "utf8");
-    return initialBuildings;
+    fs.writeFileSync(DB_FILE, JSON.stringify(defaultState, null, 2), "utf8");
+    return defaultState;
   }
   try {
     const raw = fs.readFileSync(DB_FILE, "utf8");
-    return JSON.parse(raw);
+    const data = JSON.parse(raw);
+    
+    // Migration from old array format
+    if (Array.isArray(data)) {
+      const migratedState = { ...defaultState, buildings: data };
+      fs.writeFileSync(DB_FILE, JSON.stringify(migratedState, null, 2), "utf8");
+      return migratedState;
+    }
+    
+    // Ensure all collections exist
+    return { ...defaultState, ...data };
   } catch {
-    return initialBuildings;
+    return defaultState;
   }
 }
 
-export function saveBuildings(data: BuildingRecord[]): void {
+export function saveDB(data: DBState): void {
   if (!fs.existsSync(DB_DIR)) {
     fs.mkdirSync(DB_DIR, { recursive: true });
   }
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+export function getBuildings(): BuildingRecord[] {
+  return getDB().buildings;
+}
+
+export function saveBuildings(data: BuildingRecord[]): void {
+  const db = getDB();
+  db.buildings = data;
+  saveDB(db);
 }

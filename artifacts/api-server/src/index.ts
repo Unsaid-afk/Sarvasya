@@ -3,9 +3,8 @@ import { logger } from "./lib/logger";
 
 const rawPort = process.env["PORT"] || "5001";
 
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
+const port = parseInt(rawPort, 10);
+if (Number.isNaN(port)) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
@@ -14,6 +13,5 @@ app.listen(port, (err) => {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
-
-  logger.info({ port }, "Server listening");
+  logger.info({ port }, "Server is listening");
 });

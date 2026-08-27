@@ -1,6 +1,12 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useGetBuilding, useGetDashboardSummary, useListBuildings, useRunComplianceCheck, useSubmitAudit, getGetBuildingQueryKey, getGetDashboardSummaryQueryKey, getListBuildingsQueryKey } from '@workspace/api-client-react';
+import { 
+  useGetBuilding, useGetDashboardSummary, useListBuildings, useRunComplianceCheck, useSubmitAudit, 
+  useListComplaints, useListNGOs, useListVolunteerBookings, useListSafeSpots,
+  useSubmitComplaint, useUpdateComplaintStatus, useCreateVolunteerBooking, useCreateSafeSpot,
+  useGetUserStrikes,
+  getGetBuildingQueryKey, getGetDashboardSummaryQueryKey, getListBuildingsQueryKey 
+} from '@workspace/api-client-react';
 import type { Building, BuildingDetail, ComplianceInput, ComplianceReport, Gap, AuditInput } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -11,236 +17,13 @@ import {
   Menu, Search, Send, ShieldCheck, Star, X, Volume2, Eye, Contrast, 
   Camera, CameraOff, Navigation, AlertOctagon, Heart, Phone, Users, 
   Mic, User, Shield, HelpCircle, Gift, Calendar, Plus, Map, CheckSquare
-} from 'lucide-react';
+, Bell, CheckCircle2, AlertCircle} from 'lucide-react';
 import { Link, Route, Switch, Router as WouterRouter, useLocation, useParams } from 'wouter';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
 
-// Add new routes to navigation
-const navItems = [
-  { href: '/', label: 'Overview', icon: LayoutDashboard },
-  { href: '/audit', label: 'Architect Audit', icon: FileCheck2 },
-  { href: '/inspections', label: 'Field Inspection', icon: ClipboardCheck },
-  { href: '/complaints', label: 'Complaints Pipeline', icon: AlertOctagon },
-  { href: '/volunteering', label: 'Volunteering & NGOs', icon: Heart },
-  { href: '/helplines', label: 'Helplines', icon: Phone },
-  { href: '/safe-spots', label: 'Safe Spots', icon: ShieldCheck },
-  { href: '/buddy', label: 'Find a Buddy', icon: Users }
-];
 
-// Offline & Local Storage Mock Database Setup
-const INITIAL_BUILDINGS = [
-  {
-    id: "ssg-hospital",
-    name: "Sir Sayajirao General (SSG) Hospital",
-    address: "Jail Road, Anandpura, Vadodara, Gujarat",
-    builder: "Dept of Health, Govt of Gujarat",
-    rating: 4.8,
-    status: "green" as const,
-    lastAudit: "10 Aug 2026",
-    accessibleFeatures: ["Step-free entry", "Tactile path", "Braille lift", "Accessible restroom", "Emergency alarm in toilets"],
-    coordinates: { lat: 18.531, lng: 73.844 },
-    auditor: "National Access Audit Association",
-    category: "hospital",
-    report: {
-      score: 98,
-      rating: 4.8,
-      summary: "Excellent compliance with NBC 2016. Braille directional maps installed at reception.",
-      checkedAt: "10 Aug 2026",
-      gaps: [],
-    },
-    audit: {
-      id: "audit-apex-01",
-      auditorName: "National Access Audit Association",
-      submittedAt: "10 Aug 2026",
-      status: "verified" as const,
-      summary: "Verified all parameters on-site. Accessible restrooms have grab rails at 750mm height.",
-    },
-    wayfinding: [
-      { id: "entrance", label: "Main entrance ramp", type: "ramp", status: "open" as const, x: 20, y: 80, note: "Ramp with 1:12 slope and double handrails." },
-      { id: "lift", label: "Central elevator bank", type: "lift", status: "open" as const, x: 50, y: 40, note: "Fitted with voice announcement and Braille keys." },
-      { id: "restroom", label: "Ground floor accessible washroom", type: "restroom", status: "open" as const, x: 80, y: 30, note: "Sliding door with grab rails." },
-    ],
-  },
-  {
-    id: "vidhan-bhavan",
-    name: "Vadodara Ward 15 Office",
-    address: "Alkapuri, Vadodara, Gujarat",
-    builder: "Vadodara Municipal Corporation",
-    rating: 4.7,
-    status: "green" as const,
-    lastAudit: "12 Jun 2026",
-    accessibleFeatures: ["Step-free entry", "Tactile path", "Induction loop", "Accessible restroom"],
-    coordinates: { lat: 18.532, lng: 73.845 },
-    auditor: "AccessWorks India",
-    category: "government",
-    report: {
-      score: 94,
-      rating: 4.7,
-      summary: "Strong alignment with RPwD Act and National Building Code requirements. One minor signage gap remains.",
-      checkedAt: "12 Jun 2026",
-      gaps: [
-        {
-          id: "gap-signage",
-          title: "Wayfinding signage contrast",
-          severity: "minor" as const,
-          reference: "NBC 2016 · 4.3.2",
-          recommendation: "Increase luminance contrast on the second-floor directional signs.",
-        },
-      ],
-    },
-    audit: {
-      id: "audit-vb-01",
-      auditorName: "AccessWorks India",
-      submittedAt: "12 Jun 2026",
-      status: "verified" as const,
-      summary: "On-site inspection confirms the AI report. Ramp landing, lift controls, and restroom clearances were measured and verified.",
-    },
-    wayfinding: [
-      { id: "entrance", label: "Accessible entrance", type: "ramp", status: "open" as const, x: 18, y: 71, note: "Proceed 12 metres to the tactile path." },
-      { id: "lift", label: "Lift · Ground floor", type: "lift", status: "open" as const, x: 55, y: 39, note: "Lift is operational. Voice announcements enabled." },
-      { id: "restroom", label: "Accessible restroom", type: "restroom", status: "open" as const, x: 76, y: 27, note: "Clearance verified at 1,550 mm." },
-      { id: "help", label: "Help desk", type: "help", status: "open" as const, x: 34, y: 29, note: "Staff assistance available." },
-    ],
-  },
-  {
-    id: "vadodara-civic-centre",
-    name: "Vadodara Civic Centre",
-    address: "Alkapuri, Vadodara, Gujarat",
-    builder: "Vadodara Municipal Corporation",
-    rating: 3.8,
-    status: "amber" as const,
-    lastAudit: "28 May 2026",
-    accessibleFeatures: ["Step-free entry", "Accessible parking", "Lift access"],
-    coordinates: { lat: 18.533, lng: 73.846 },
-    auditor: "Inclusive Routes Collective",
-    category: "government",
-    report: {
-      score: 76,
-      rating: 3.8,
-      summary: "The building is usable for most visitors, but tactile navigation and restroom turning clearances need attention.",
-      checkedAt: "28 May 2026",
-      gaps: [
-        {
-          id: "gap-tactile",
-          title: "Continuous tactile guidance",
-          severity: "critical" as const,
-          reference: "RPwD Act · Schedule 2",
-          recommendation: "Connect the main entry to reception with a continuous tactile path.",
-        },
-        {
-          id: "gap-restroom",
-          title: "Restroom turning clearance",
-          severity: "moderate" as const,
-          reference: "NBC 2016 · 4.5.4",
-          recommendation: "Maintain a 1,500 mm turning circle inside the accessible restroom.",
-        },
-      ],
-    },
-    audit: {
-      id: "audit-pcc-01",
-      auditorName: "Inclusive Routes Collective",
-      submittedAt: "28 May 2026",
-      status: "verified" as const,
-      summary: "Field visit found an operational lift and compliant ramp. Two improvement items remain open from the inspection.",
-    },
-    wayfinding: [
-      { id: "entrance", label: "Main ramp", type: "ramp", status: "open" as const, x: 18, y: 71, note: "Ramp is open. Landing is slightly uneven." },
-      { id: "lift", label: "Lift · Ground floor", type: "lift", status: "open" as const, x: 55, y: 39, note: "Lift is operational." },
-      { id: "restroom", label: "Accessible restroom", type: "restroom", status: "limited" as const, x: 76, y: 27, note: "Use with assistance; turning clearance is limited." },
-      { id: "help", label: "Citizen help desk", type: "help", status: "open" as const, x: 34, y: 29, note: "Staff assistance available." },
-    ],
-  },
-  {
-    id: "alkapuri-library",
-    name: "Alkapuri Community Library",
-    address: "Alkapuri, Vadodara, Gujarat",
-    builder: "Vadodara Urban Development",
-    rating: 2.9,
-    status: "red" as const,
-    lastAudit: "04 Apr 2026",
-    accessibleFeatures: ["Ground-floor service desk", "Accessible parking"],
-    coordinates: { lat: 18.534, lng: 73.847 },
-    auditor: "Open Access Bengaluru",
-    category: "library",
-    report: {
-      score: 58,
-      rating: 2.9,
-      summary: "Several critical access barriers were identified. The building is not yet independently navigable for wheelchair users.",
-      checkedAt: "04 Apr 2026",
-      gaps: [
-        {
-          id: "gap-ramp",
-          title: "Ramp slope exceeds standard",
-          severity: "critical" as const,
-          reference: "NBC 2016 · 4.1.3",
-          recommendation: "Rebuild the entry ramp to a maximum 1:12 gradient with level landings.",
-        },
-        {
-          id: "gap-lift",
-          title: "No accessible vertical circulation",
-          severity: "critical" as const,
-          reference: "RPwD Act · Section 41",
-          recommendation: "Provide an accessible lift or relocate public services to the entry level.",
-        },
-        {
-          id: "gap-doors",
-          title: "Service door width",
-          severity: "moderate" as const,
-          reference: "NBC 2016 · 4.4.1",
-          recommendation: "Increase public-facing door clear width to at least 900 mm.",
-        },
-      ],
-    },
-    audit: {
-      id: "audit-kcl-01",
-      auditorName: "Open Access Bengaluru",
-      submittedAt: "04 Apr 2026",
-      status: "pending" as const,
-      summary: "Initial field report submitted. A follow-up verification is requested after the entry ramp remediation.",
-    },
-    wayfinding: [
-      { id: "entrance", label: "Main entrance", type: "ramp", status: "limited" as const, x: 18, y: 71, note: "Ramp is steep. Assistance recommended." },
-      { id: "lift", label: "Lift", type: "lift", status: "closed" as const, x: 55, y: 39, note: "No accessible lift is available." },
-      { id: "restroom", label: "Ground-floor restroom", type: "restroom", status: "limited" as const, x: 76, y: 27, note: "Clearance is not verified." },
-      { id: "help", label: "Service desk", type: "help", status: "open" as const, x: 34, y: 29, note: "Ask staff for assistance." },
-    ],
-  },
-];
-
-const INITIAL_COMPLAINTS = [
-  {
-    id: "COMP-101",
-    buildingId: "alkapuri-library",
-    buildingName: "Alkapuri Community Library",
-    category: "Ramp Slope",
-    details: "The ramp is extremely steep, making it impossible for manual wheelchair users to climb safely.",
-    status: "In Progress",
-    officer: "Officer Ritesh Deshmukh, CPWD",
-    dismissReason: "",
-    filedBy: "Asha Rao",
-    submittedAt: "2026-08-01T10:00:00Z"
-  },
-  {
-    id: "COMP-102",
-    buildingId: "vadodara-civic-centre",
-    buildingName: "Vadodara Civic Centre",
-    category: "Washroom Clearance",
-    details: "Washroom is filled with maintenance cleaning supplies preventing wheelchair access.",
-    status: "Resolved",
-    officer: "Officer Vikram Malhotra, PMC",
-    dismissReason: "",
-    filedBy: "Asha Rao",
-    submittedAt: "2026-08-05T14:30:00Z"
-  }
-];
-
-const INITIAL_NGOs = [
-  { id: "ngo-1", name: "NCPEDP local chapter", type: "NGO", focus: "Accessibility audits & aid kits", address: "Alkapuri, Vadodara", tasks: ["Audit assistant", "Record digitisation"] },
-  { id: "ngo-2", name: "Samarthyam", type: "NGO", focus: "PwD community representation", address: "Alkapuri, Vadodara", tasks: ["Companion walk", "Reading assistant"] },
-  { id: "ngo-3", name: "AccessAbility", type: "NGO", focus: "Community outreach & awareness", address: "Alkapuri, Vadodara", tasks: ["Event coordination", "Sign language support"] },
-];
 
 const HELPLINE_DIRECTORY = [
   { name: "Police Emergency", number: "112 / 100", authority: "Local Police", tags: "emergency, safety, police" },
@@ -251,6 +34,29 @@ const HELPLINE_DIRECTORY = [
   { name: "Women Helpline", number: "1091", authority: "National Commission for Women", tags: "women, emergency, safety" },
 ];
 
+
+// --- Notification System ---
+type Notification = { id: string; title: string; message: string; date: string; read: boolean; type: 'info'|'success'|'warning' };
+let globalNotifications: Notification[] = [];
+let notifListeners: Function[] = [];
+const addNotification = (title: string, message: string, type: 'info'|'success'|'warning' = 'info') => {
+  globalNotifications = [{ id: Date.now().toString(), title, message, date: new Date().toISOString(), read: false, type }, ...globalNotifications];
+  notifListeners.forEach(l => l([...globalNotifications]));
+};
+const useNotifications = () => {
+  const [notifs, setNotifs] = useState<Notification[]>(globalNotifications);
+  useEffect(() => {
+    notifListeners.push(setNotifs);
+    return () => { notifListeners = notifListeners.filter(l => l !== setNotifs); };
+  }, []);
+  const markAllRead = () => {
+    globalNotifications = globalNotifications.map(n => ({...n, read: true}));
+    notifListeners.forEach(l => l([...globalNotifications]));
+  };
+  return { notifs, markAllRead, addNotification };
+};
+// ---------------------------
+
 function BrandMark() {
   return <div className="flex items-center gap-3">
     <div className="relative flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden shadow-md border border-[hsl(var(--accent))] bg-white">
@@ -258,91 +64,101 @@ function BrandMark() {
     </div>
     <div>
       <div className="font-serif text-xl font-bold tracking-tight text-[hsl(var(--sidebar-foreground))]">Sarvasya</div>
-      <div className="font-data text-[9px] uppercase tracking-[.25em] text-[hsl(var(--accent))] font-semibold">Access for all</div>
+      <div className="font-data text-[9px] uppercase tracking-[.25em] text-[hsl(var(--accent))] font-semibold">Access for all
+        {/* Transparent Complaints Section */}
+        <div className="col-span-1 lg:col-span-2 mt-2 space-y-6">
+          <section className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 shadow-civic md:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="font-data text-[10px] uppercase tracking-[.16em] text-[hsl(var(--primary))]">Public Accountability</div>
+                <h2 className="mt-1 font-display text-2xl font-bold">Community Complaints</h2>
+              </div>
+              <AlertOctagon className="text-[hsl(var(--primary))]" />
+            </div>
+            
+            {buildingComplaints.length === 0 ? (
+              <div className="text-sm text-muted-foreground p-4 bg-slate-50 rounded-lg text-center border border-dashed">No complaints have been filed for this building.</div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {buildingComplaints.map(c => (
+                  <button key={c.id} onClick={() => setSelectedComplaint(c)} className="text-left border rounded-xl p-4 hover:shadow-md hover:border-[hsl(var(--primary))] transition-all bg-white relative overflow-hidden group">
+                    <div className={`absolute top-0 left-0 w-1 h-full ${c.status === 'Resolved' ? 'bg-green-500' : c.status === 'Dismissed' ? 'bg-red-500' : 'bg-yellow-500'}`}></div>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-data text-[9px] uppercase tracking-wider text-muted-foreground">{c.id}</span>
+                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${c.status === 'Resolved' ? 'bg-green-100 text-green-700' : c.status === 'Dismissed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{c.status}</span>
+                    </div>
+                    <h4 className="font-bold text-sm group-hover:text-[hsl(var(--primary))]">{c.category}</h4>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{c.details}</p>
+                    <div className="mt-3 text-[10px] text-[hsl(var(--primary))] font-semibold flex items-center gap-1">View Timeline <ChevronRight size={12}/></div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+      </div>
     </div>
   </div>;
 }
 
-// Global state hooks / helper for Offline-First mock database
-function useMockDB() {
-  const [buildings, setBuildings] = useState<any[]>(() => {
-    const cached = localStorage.getItem("sarvasya_buildings");
-    return cached ? JSON.parse(cached) : INITIAL_BUILDINGS;
-  });
-
-  const [complaints, setComplaints] = useState<any[]>(() => {
-    const cached = localStorage.getItem("sarvasya_complaints");
-    return cached ? JSON.parse(cached) : INITIAL_COMPLAINTS;
-  });
-
-  const [volunteers, setVolunteers] = useState<any[]>(() => {
-    const cached = localStorage.getItem("sarvasya_volunteers");
-    return cached ? JSON.parse(cached) : [];
-  });
-
-  const [safeSpots, setSafeSpots] = useState<any[]>(() => {
-    const cached = localStorage.getItem("sarvasya_safespots");
-    return cached ? JSON.parse(cached) : [
-      { id: "ss-1", name: "SSG Hospital Lobby Refuge Area", buildingId: "ssg-hospital", note: "Fitted with fireproof door and wheelchair parking." }
-    ];
-  });
+// Global state hooks replaced by React Query API wrappers
+function useAppAPI() {
+  const { data: buildingsData } = useListBuildings();
+  const { data: ngosData } = useListNGOs();
+  const { data: complaintsData, refetch: refetchComplaints } = useListComplaints();
+  const { data: volunteersData, refetch: refetchVolunteers } = useListVolunteerBookings();
+  const { data: safeSpotsData, refetch: refetchSafeSpots } = useListSafeSpots();
+  
+  const submitComplaint = useSubmitComplaint();
+  const updateComplaint = useUpdateComplaintStatus();
+  const submitVolunteer = useCreateVolunteerBooking();
+  const submitSafeSpot = useCreateSafeSpot();
 
   const [profile, setProfile] = useState<any>(() => {
     const cached = localStorage.getItem("sarvasya_profile");
-    return cached ? JSON.parse(cached) : { name: "Asha Rao", role: "citizen", email: "asha@accessnow.org", fakeStrikes: 0 };
+    return cached ? JSON.parse(cached) : { name: "Asha Rao", role: "disabled_user", email: "asha@accessnow.org", fakeStrikes: 0 };
   });
 
-  const save = (key: string, data: any) => {
-    localStorage.setItem(key, JSON.stringify(data));
-  };
-
-  const addComplaint = (complaint: any) => {
-    const updated = [complaint, ...complaints];
-    setComplaints(updated);
-    save("sarvasya_complaints", updated);
-  };
-
-  const updateComplaintStatus = (id: string, status: string, reason?: string) => {
-    const updated = complaints.map(c => {
-      if (c.id === id) {
-        let strikes = profile.fakeStrikes;
-        if (status === "Dismissed" && reason?.toLowerCase().includes("fake")) {
-          strikes += 1;
-          const updatedProfile = { ...profile, fakeStrikes: strikes };
-          setProfile(updatedProfile);
-          save("sarvasya_profile", updatedProfile);
-        }
-        return { ...c, status, dismissReason: reason || "" };
-      }
-      return c;
-    });
-    setComplaints(updated);
-    save("sarvasya_complaints", updated);
-  };
-
-  const addVolunteerBooking = (booking: any) => {
-    const updated = [booking, ...volunteers];
-    setVolunteers(updated);
-    save("sarvasya_volunteers", updated);
-  };
-
-  const addSafeSpot = (spot: any) => {
-    const updated = [spot, ...safeSpots];
-    setSafeSpots(updated);
-    save("sarvasya_safespots", updated);
-  };
+  const { data: strikesData } = useGetUserStrikes(profile.name, { query: { enabled: !!profile.name, queryKey: ['strikes', profile.name] } as any });
 
   const registerUser = (user: any) => {
     setProfile(user);
-    save("sarvasya_profile", user);
+    localStorage.setItem("sarvasya_profile", JSON.stringify(user));
+  };
+
+  const addComplaint = async (complaint: any) => {
+    await submitComplaint.mutateAsync({ data: complaint });
+    refetchComplaints();
+  };
+
+  const updateComplaintStatus = async (id: string, status: string, reason?: string) => {
+    await updateComplaint.mutateAsync({ id, data: { status: status as any, dismissReason: reason } });
+    refetchComplaints();
+  };
+
+  const addVolunteerBooking = async (booking: any) => {
+    await submitVolunteer.mutateAsync({ data: booking });
+    refetchVolunteers();
+  };
+
+  const addSafeSpot = async (spot: any) => {
+    await submitSafeSpot.mutateAsync({ data: spot });
+    refetchSafeSpots();
+  };
+
+  const actualProfile = {
+    ...profile,
+    fakeStrikes: strikesData?.strikes ?? profile.fakeStrikes
   };
 
   return {
-    buildings,
-    complaints,
-    volunteers,
-    safeSpots,
-    profile,
+    buildings: buildingsData || [],
+    ngos: ngosData || [],
+    complaints: complaintsData || [],
+    volunteers: volunteersData || [],
+    safeSpots: safeSpotsData || [],
+    profile: actualProfile,
     addComplaint,
     updateComplaintStatus,
     addVolunteerBooking,
@@ -352,6 +168,21 @@ function useMockDB() {
 }
 
 function Shell({ children }: { children: ReactNode }) {
+
+  const navItems = useMemo(() => {
+    const allItems = [
+      { href: '/', label: 'Overview', icon: LayoutDashboard, roles: ['builder', 'auditor', 'disabled_user', 'regular_user'] },
+      { href: '/audit', label: 'Architect Audit', icon: FileCheck2, roles: ['builder'] },
+      { href: '/inspections', label: 'Field Inspection', icon: ClipboardCheck, roles: ['auditor'] },
+      { href: '/complaints', label: 'Complaints Pipeline', icon: AlertOctagon, roles: ['builder', 'disabled_user', 'regular_user', 'auditor'] },
+      { href: '/volunteering', label: 'Volunteering & NGOs', icon: Heart, roles: ['regular_user', 'disabled_user'] },
+      { href: '/helplines', label: 'Helplines', icon: Phone, roles: ['disabled_user', 'regular_user', 'builder', 'auditor'] },
+      { href: '/safe-spots', label: 'Safe Spots', icon: ShieldCheck, roles: ['disabled_user', 'regular_user'] },
+      { href: '/buddy', label: 'Find a Buddy', icon: Users, roles: ['disabled_user', 'regular_user'] }
+    ];
+    return allItems.filter(item => item.roles.includes(profile.role));
+  }, [profile.role]);
+
   const [location] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
@@ -374,7 +205,12 @@ function Shell({ children }: { children: ReactNode }) {
 
   // Easy Registration Modal
   const [showRegModal, setShowRegModal] = useState(false);
-  const { profile, registerUser } = useMockDB();
+
+  const { notifs, markAllRead } = useNotifications();
+  const [showNotifs, setShowNotifs] = useState(false);
+  const unreadCount = notifs.filter(n => !n.read).length;
+
+  const { profile, registerUser } = useAppAPI();
   const [regName, setRegName] = useState(profile.name || "");
   const [regEmail, setRegEmail] = useState(profile.email || "");
   const [regRole, setRegRole] = useState(profile.role || "citizen");
@@ -499,6 +335,34 @@ function Shell({ children }: { children: ReactNode }) {
             <span className={`h-2.5 w-2.5 rounded-full ${isOffline ? 'bg-amber-500' : 'bg-green-500'}`} />
             <span className="font-semibold uppercase tracking-wider">{isOffline ? 'Offline Cache' : 'Online API'}</span>
           </div>
+          
+          <div className="relative">
+            <button onClick={() => setShowNotifs(!showNotifs)} className="relative text-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] flex items-center p-1">
+              <Bell size={18} />
+              {unreadCount > 0 && <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-bold">{unreadCount}</span>}
+            </button>
+            {showNotifs && (
+              <div className="absolute top-8 left-0 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                <div className="flex justify-between items-center p-3 border-b bg-gray-50">
+                  <span className="font-bold text-xs">Notifications</span>
+                  <button onClick={markAllRead} className="text-[10px] text-blue-600 hover:underline">Mark all read</button>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifs.length === 0 ? <div className="p-4 text-center text-xs text-gray-500">No notifications</div> : notifs.map(n => (
+                    <div key={n.id} className={`p-3 border-b text-xs ${n.read ? 'bg-white text-gray-600' : 'bg-blue-50 text-black'}`}>
+                      <div className="font-bold mb-1 flex items-center gap-1">
+                        {n.type === 'success' ? <CheckCircle2 size={12} className="text-green-600"/> : n.type === 'warning' ? <AlertCircle size={12} className="text-amber-600"/> : <Info size={12} className="text-blue-600"/>}
+                        {n.title}
+                      </div>
+                      <div className="text-[10px]">{n.message}</div>
+                      <div className="text-[8px] text-gray-400 mt-1">{new Date(n.date).toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button onClick={() => setShowRegModal(true)} className="text-[hsl(var(--accent))] hover:underline flex items-center gap-1 font-bold">
             <User size={13} /> {profile.name ? 'Edit' : 'Login'}
           </button>
@@ -645,9 +509,10 @@ function Shell({ children }: { children: ReactNode }) {
             <div>
               <label className="block text-xs font-bold mb-1.5">Profile Role</label>
               <select value={regRole} onChange={(e) => setRegRole(e.target.value)} className="w-full h-10 border rounded-lg px-3 text-sm">
-                <option value="citizen">Citizen (File complaints/Audits)</option>
-                <option value="officer">Officer (Resolve/Dismiss complaints)</option>
-                <option value="volunteer">Volunteer (Volunteer / Donate)</option>
+                <option value="disabled_user">Disabled User (Access assistive tools & complaints)</option>
+                <option value="regular_user">User without disabilities (Volunteer & Buddy)</option>
+                <option value="builder">Builder (Submit blueprints & track compliance)</option>
+                <option value="auditor">Auditor (Review blueprints & field audits)</option>
               </select>
             </div>
             <button type="submit" className="w-full bg-[hsl(var(--primary))] text-white rounded-lg h-11 font-bold">Save Registration</button>
@@ -723,53 +588,34 @@ function Dashboard() {
   const [status, setStatus] = useState<'all' | 'green' | 'amber' | 'red'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'hospital' | 'government' | 'library'>('all');
   
-  const { buildings, complaints } = useMockDB();
+  const { data: buildingsData, isLoading, isError, refetch } = useListBuildings({ status, query: query || undefined });
+  const { data: summaryData } = useGetDashboardSummary();
+
+  const buildings = buildingsData || [];
 
   const filteredBuildings = useMemo(() => {
     return buildings.filter(building => {
-      const matchesQuery = building.name.toLowerCase().includes(query.toLowerCase()) || 
-                           building.address.toLowerCase().includes(query.toLowerCase()) ||
-                           building.builder.toLowerCase().includes(query.toLowerCase());
-      
-      const dynamicRating = calculateRating(building, complaints);
-      let calculatedStatus = building.status;
-      if (dynamicRating >= 4.5) calculatedStatus = 'green';
-      else if (dynamicRating >= 3.5) calculatedStatus = 'amber';
-      else calculatedStatus = 'red';
-
-      const matchesStatus = status === 'all' || calculatedStatus === status;
       const matchesCategory = categoryFilter === 'all' || building.category === categoryFilter;
-
-      return matchesQuery && matchesStatus && matchesCategory;
+      return matchesCategory;
     });
-  }, [buildings, query, status, categoryFilter, complaints]);
+  }, [buildings, categoryFilter]);
 
-  const summary = useMemo(() => {
-    const total = buildings.length;
-    const greenCount = buildings.filter(b => calculateRating(b, complaints) >= 4.5).length;
-    const openGapsCount = complaints.filter(c => c.status !== "Resolved").length;
-    const avgRating = buildings.reduce((acc, b) => acc + calculateRating(b, complaints), 0) / total;
-
-    return {
-      buildings: total,
-      verified: greenCount,
-      openGaps: openGapsCount,
-      averageRating: avgRating,
-      updatedAt: new Date().toISOString()
-    };
-  }, [buildings, complaints]);
+  if (isLoading) return <LoadingState />;
+  if (isError) return <ErrorState onRetry={refetch} />;
 
   return <div>
     <PageHeader eyebrow="Public Accessibility Directory" title={<>Access for everyone,<br /><span className="text-[hsl(var(--primary))]">everywhere.</span></>} description="Explore and verify the accessibility of public buildings across India. Plan your visits with confidence and help us improve public access by sharing your experience.">
       <Link href="/audit" data-testid="link-start-audit" className="inline-flex items-center gap-2 rounded-lg bg-[hsl(var(--primary))] px-5 py-3 text-sm font-bold text-[hsl(var(--primary-foreground))] shadow-civic transition-transform hover:-translate-y-0.5">Check a building plan <ChevronRight size={16} /></Link>
     </PageHeader>
     <div className="mx-auto max-w-[1240px] px-5 py-7 md:px-10 md:py-9">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Buildings mapped" value={String(summary.buildings)} note="Across public jurisdictions" />
-        <Metric label="Verified recently" value={String(summary.verified)} note="Audited and compliant" accent="bg-[#32805e]" />
-        <Metric label="Open accessibility issues" value={String(summary.openGaps)} note="Reported by community" accent="bg-[#c28b1b]" />
-        <Metric label="Average rating" value={summary.averageRating.toFixed(1)} note="Updated live from audits" accent="bg-[hsl(var(--accent))]" />
-      </div>
+      {summaryData && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric label="Buildings mapped" value={String(summaryData.buildings)} note="Across public jurisdictions" />
+          <Metric label="Verified recently" value={String(summaryData.verified)} note="Audited and compliant" accent="bg-[#32805e]" />
+          <Metric label="Open accessibility issues" value={String(summaryData.openGaps)} note="Reported by community" accent="bg-[#c28b1b]" />
+          <Metric label="Average rating" value={summaryData.averageRating.toFixed(1)} note="Updated live from audits" accent="bg-[hsl(var(--accent))]" />
+        </div>
+      )}
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_300px]">
         <section className="min-w-0 animate-rise">
@@ -814,7 +660,7 @@ function Dashboard() {
             </div>
             
             {filteredBuildings.length ? filteredBuildings.map((building) => {
-              const dynRating = calculateRating(building, complaints);
+              const dynRating = building.rating || 0;
               let dynStatus = building.status;
               if (dynRating >= 4.5) dynStatus = 'green';
               else if (dynRating >= 3.5) dynStatus = 'amber';
@@ -875,7 +721,7 @@ function Dashboard() {
 
 function DetailPage() {
   const { id = '' } = useParams<{ id: string }>();
-  const { buildings, complaints } = useMockDB();
+  const { buildings, complaints } = useAppAPI();
   const building = buildings.find(b => b.id === id);
 
   if (!building) return <div className="mx-auto max-w-[760px] px-5 py-12 md:px-10"><ErrorState onRetry={() => {}} /></div>;
@@ -898,7 +744,9 @@ function DetailPage() {
 function BuildingDetailPage({ building }: { building: any }) {
   const [selectedWayfinding, setSelectedWayfinding] = useState(building.wayfinding[0]?.id);
   const selected = building.wayfinding.find((item: any) => item.id === selectedWayfinding);
-  const { safeSpots, addSafeSpot } = useMockDB();
+  const { safeSpots, addSafeSpot, complaints } = useAppAPI();
+  const buildingComplaints = complaints.filter(c => c.buildingId === building.id);
+  const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
 
   const handleSaveSafeSpot = () => {
     addSafeSpot({
@@ -911,6 +759,62 @@ function BuildingDetailPage({ building }: { building: any }) {
   };
 
   return <div>
+    {selectedComplaint && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-[hsl(var(--card))] border border-[hsl(var(--card-border))] rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+          <div className="flex justify-between items-center border-b border-[hsl(var(--border))] pb-3 mb-5">
+            <h3 className="font-display text-xl font-bold">Complaint Resolution Timeline</h3>
+            <button onClick={() => setSelectedComplaint(null)} className="hover:opacity-70"><X /></button>
+          </div>
+          
+          <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
+            {/* Step 1: Filed */}
+            <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-[hsl(var(--primary))] text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                <Check size={16} />
+              </div>
+              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between space-x-2 mb-1">
+                  <div className="font-bold text-sm">Complaint Filed</div>
+                  <time className="font-data text-[9px] text-slate-500">{new Date(selectedComplaint.submittedAt).toLocaleDateString()}</time>
+                </div>
+                <div className="text-xs text-slate-500">Filed by {selectedComplaint.filedBy}. Issue: {selectedComplaint.category}.</div>
+              </div>
+            </div>
+            
+            {/* Step 2: Assigned */}
+            <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-blue-500 text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                <Shield size={16} />
+              </div>
+              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between space-x-2 mb-1">
+                  <div className="font-bold text-sm">Assigned to Officer</div>
+                  <time className="font-data text-[9px] text-slate-500">Shortly after</time>
+                </div>
+                <div className="text-xs text-slate-500">Assigned to {selectedComplaint.officer} for review and action.</div>
+              </div>
+            </div>
+
+            {/* Step 3: Resolution */}
+            {(selectedComplaint.status === 'Resolved' || selectedComplaint.status === 'Dismissed') && (
+              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                <div className={`flex items-center justify-center w-10 h-10 rounded-full border border-white text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 ${selectedComplaint.status === 'Resolved' ? 'bg-green-500' : 'bg-red-500'}`}>
+                  {selectedComplaint.status === 'Resolved' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                </div>
+                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between space-x-2 mb-1">
+                    <div className="font-bold text-sm">{selectedComplaint.status}</div>
+                    <time className="font-data text-[9px] text-slate-500">Actioned</time>
+                  </div>
+                  <div className="text-xs text-slate-500">{selectedComplaint.dismissReason || 'Issue resolved by authorities.'}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
     <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.45)] px-5 py-4 md:px-10"><div className="mx-auto flex max-w-[1240px] items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]"><Link href="/" data-testid="link-back-directory" className="hover:text-[hsl(var(--primary))]">Directory</Link><ChevronRight size={13} /><span className="truncate">{building.name}</span></div></div>
     <div className="mx-auto max-w-[1240px] px-5 py-8 md:px-10 md:py-11">
       <div className="flex flex-col gap-6 border-b border-[hsl(var(--border))] pb-8 md:flex-row md:items-end md:justify-between"><div><div className="font-data text-[10px] uppercase tracking-[.2em] text-[hsl(var(--primary))]">Building record / {building.id}</div><h1 data-testid="text-building-name" className="mt-3 font-display text-4xl font-bold leading-tight md:text-5xl">{building.name}</h1><p className="mt-3 flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]"><MapPin size={15} />{building.address}</p></div><div className="flex flex-wrap items-center gap-4"><StatusBadge status={building.status} /><StarRating rating={building.rating} /></div></div>
@@ -1003,6 +907,7 @@ function GapRow({ gap }: { gap: Gap }) {
 
 function AuditPage() {
   const compliance = useRunComplianceCheck();
+  const { profile } = useAppAPI();
   const [report, setReport] = useState<ComplianceReport | null>(null);
   const [form, setForm] = useState({ 
     builderName: '', 
@@ -1079,6 +984,7 @@ function AuditPage() {
           gaps: [...res.gaps, ...extraGaps]
         };
         setReport(finalReport);
+        addNotification("New Blueprint Submitted", `Builder ${form.builderName} submitted ${form.buildingName}. Nearby auditors notified for review.`, "info");
       } 
     }); 
   };
@@ -1179,7 +1085,7 @@ function InfoPanel({ title, icon, items }: { title: string; icon: ReactNode; ite
 }
 
 function InspectionsPage() {
-  const { buildings } = useMockDB();
+  const { buildings } = useAppAPI();
   const submitAudit = useSubmitAudit();
   
   const [form, setForm] = useState<AuditInput>({ buildingId: '', auditorName: '', summary: '' });
@@ -1203,7 +1109,7 @@ function InspectionsPage() {
   const submit = (event: FormEvent) => { 
     event.preventDefault(); 
     const enrichedSummary = `[${facilityTag} | Rating: ${usabilityRating}/5 ${locationArea ? '| Area: ' + locationArea : ''}] ${form.summary} ${recommendedFix ? ' Recommended Fix: ' + recommendedFix : ''}`;
-    submitAudit.mutate({ data: { ...form, summary: enrichedSummary } }, { onSuccess: () => setSubmitted(true) }); 
+    submitAudit.mutate({ data: { ...form, summary: enrichedSummary } }, { onSuccess: () => { setSubmitted(true); addNotification("Field Report Published", `Your field report for ${form.buildingId} is live.`, "success"); } }); 
   };
 
   if (submitted) return <div className="mx-auto max-w-[720px] px-5 py-16 md:px-10"><div className="animate-rise rounded-2xl border border-[#b9d6c3] bg-[#edf7ef] p-8 text-center shadow-civic"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32805e] text-white"><Check size={27} /></div><div className="mt-5 font-data text-[10px] uppercase tracking-[.18em] text-[#26734e]">Field Report Received</div><h1 className="mt-2 font-display text-4xl font-bold text-[#173b2c]">Thank you for making access visible.</h1><p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[#426b55]">Your field observation note has been added to the review queue. Verified observations help citizens plan their visit with confidence.</p><button type="button" onClick={() => { setSubmitted(false); setForm({ buildingId: '', auditorName: '', summary: '' }); setLocationArea(''); setRecommendedFix(''); }} data-testid="button-submit-another-audit" className="mt-7 rounded-lg bg-[#26734e] px-5 py-3 text-sm font-bold text-white">Submit another field report</button></div></div>;
@@ -1325,7 +1231,7 @@ function InspectionsPage() {
 function HelplinesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const filtered = useMemo(() => {
-    return HELPLINE_DIRECTORY.filter(h => 
+    return HELPLINE_DIRECTORY.filter((h: any) => 
       h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       h.tags.toLowerCase().includes(searchQuery.toLowerCase()) ||
       h.authority.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1340,7 +1246,7 @@ function HelplinesPage() {
         <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search query (e.g. mental aid, ambulance, police)..." className="h-12 w-full rounded-xl border border-[hsl(var(--input))] bg-[hsl(var(--card))] pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((item, idx) => (
+        {filtered.map((item: any, idx: number) => (
           <div key={idx} className="border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] rounded-xl p-5 shadow-civic flex flex-col justify-between">
             <div>
               <div className="font-data text-[9px] uppercase tracking-wider text-[hsl(var(--primary))] font-bold">{item.authority}</div>
@@ -1361,7 +1267,7 @@ function HelplinesPage() {
 // NEW PAGE: COMPLAINTS PIPELINE & TRACKING
 // ----------------------------------------------------
 function ComplaintsPage() {
-  const { complaints, addComplaint, updateComplaintStatus, buildings, profile } = useMockDB();
+  const { complaints, addComplaint, updateComplaintStatus, buildings, profile } = useAppAPI();
   const [selectedBldg, setSelectedBldg] = useState("");
   const [category, setCategory] = useState("Ramp Slope");
   const [details, setDetails] = useState("");
@@ -1395,7 +1301,7 @@ function ComplaintsPage() {
     addComplaint(newComp);
     setSelectedBldg("");
     setDetails("");
-    alert("Complaint registered. Assigned to Officer Devendra Varma for inspection.");
+    addNotification("Complaint Registered", "Assigned to Officer Devendra Varma. The building owner has been notified.", "warning");
   };
 
   // Simulated Officer resolution or dismissal
@@ -1408,7 +1314,7 @@ function ComplaintsPage() {
     updateComplaintStatus(selectedComplaintId, status, dismissReason);
     setSelectedComplaintId("");
     setDismissReason("");
-    alert(`Complaint has been marked as ${status}.`);
+    addNotification("Complaint Updated", `Complaint marked as ${status}. The filer has been notified.`, "success");
   };
 
   return <div>
@@ -1545,8 +1451,8 @@ function ComplaintsPage() {
 // NEW PAGE: VOLUNTEERING & DONATIONS
 // ----------------------------------------------------
 function VolunteeringPage() {
-  const { volunteers, addVolunteerBooking } = useMockDB();
-  const [selectedNGO, setSelectedNGO] = useState(INITIAL_NGOs[0].id);
+  const { volunteers, addVolunteerBooking, ngos } = useAppAPI();
+  const [selectedNGO, setSelectedNGO] = useState(ngos[0]?.id || "");
   const [bookingDate, setBookingDate] = useState("");
   const [specialOccasion, setSpecialOccasion] = useState("");
   const [volunteerTask, setVolunteerTask] = useState("");
@@ -1554,7 +1460,8 @@ function VolunteeringPage() {
   // Donation state
   const [donateAmount, setDonateAmount] = useState("500");
 
-  const ngo = INITIAL_NGOs.find(n => n.id === selectedNGO) || INITIAL_NGOs[0];
+  const ngo = ngos.find(n => n.id === selectedNGO) || ngos[0];
+  if (!ngo) return <div>Loading...</div>;
 
   const handleBook = (e: FormEvent) => {
     e.preventDefault();
@@ -1592,7 +1499,7 @@ function VolunteeringPage() {
             <div>
               <label className="block text-xs font-bold mb-1">Select Institution / NGO</label>
               <select value={selectedNGO} onChange={(e) => setSelectedNGO(e.target.value)} className="w-full h-10 border rounded-lg px-2 text-xs">
-                {INITIAL_NGOs.map(n => <option key={n.id} value={n.id}>{n.name} ({n.type})</option>)}
+                {ngos.map(n => <option key={n.id} value={n.id}>{n.name} ({n.type})</option>)}
               </select>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -1659,7 +1566,7 @@ function VolunteeringPage() {
 // NEW PAGE: SAFE SPOTS DIRECTORY
 // ----------------------------------------------------
 function SafeSpotsPage() {
-  const { safeSpots } = useMockDB();
+  const { safeSpots } = useAppAPI();
   return <div>
     <PageHeader eyebrow="Safety Protocols" title={<>Your Shortcut<br /><span className="text-[hsl(var(--primary))]">Safe Spots.</span></>} description="Quickly access safe zones, refuge rooms, and fire escapes inside complex buildings. These spots are pre-saved for instant retrieval during emergencies." />
     <div className="mx-auto max-w-[1240px] px-5 py-8 md:px-10">

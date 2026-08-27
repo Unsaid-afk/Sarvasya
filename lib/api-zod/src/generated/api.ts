@@ -32,6 +32,7 @@ export const ListBuildingsResponseItem = zod.object({
   "builder": zod.string(),
   "rating": zod.number(),
   "status": zod.enum(['green', 'amber', 'red']),
+  "category": zod.enum(['hospital', 'government', 'library']).optional(),
   "lastAudit": zod.string(),
   "accessibleFeatures": zod.array(zod.string()),
   "coordinates": zod.object({
@@ -56,6 +57,7 @@ export const GetBuildingResponse = zod.object({
   "builder": zod.string(),
   "rating": zod.number(),
   "status": zod.enum(['green', 'amber', 'red']),
+  "category": zod.enum(['hospital', 'government', 'library']).optional(),
   "lastAudit": zod.string(),
   "accessibleFeatures": zod.array(zod.string()),
   "coordinates": zod.object({
@@ -160,6 +162,178 @@ export const SubmitAuditResponse = zod.object({
   "submittedAt": zod.string(),
   "status": zod.enum(['verified', 'pending']),
   "summary": zod.string()
+})
+
+
+/**
+ * @summary List complaints
+ */
+export const ListComplaintsResponseItem = zod.object({
+  "id": zod.string(),
+  "buildingId": zod.string(),
+  "buildingName": zod.string(),
+  "category": zod.string(),
+  "details": zod.string(),
+  "status": zod.enum(['Submitted', 'Assigned', 'In Progress', 'Resolved', 'Dismissed']),
+  "officer": zod.string().optional(),
+  "dismissReason": zod.string().optional(),
+  "filedBy": zod.string(),
+  "submittedAt": zod.string()
+})
+export const ListComplaintsResponse = zod.array(ListComplaintsResponseItem)
+
+
+/**
+ * @summary Submit a new complaint
+ */
+
+
+
+
+
+
+export const SubmitComplaintBody = zod.object({
+  "buildingId": zod.string().min(1),
+  "category": zod.string().min(1),
+  "details": zod.string().min(1),
+  "filedBy": zod.string().min(1)
+})
+
+export const SubmitComplaintResponse = zod.object({
+  "id": zod.string(),
+  "buildingId": zod.string(),
+  "buildingName": zod.string(),
+  "category": zod.string(),
+  "details": zod.string(),
+  "status": zod.enum(['Submitted', 'Assigned', 'In Progress', 'Resolved', 'Dismissed']),
+  "officer": zod.string().optional(),
+  "dismissReason": zod.string().optional(),
+  "filedBy": zod.string(),
+  "submittedAt": zod.string()
+})
+
+
+/**
+ * @summary Update complaint status
+ */
+export const UpdateComplaintStatusParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateComplaintStatusBody = zod.object({
+  "status": zod.enum(['Resolved', 'Dismissed', 'In Progress']),
+  "dismissReason": zod.string().optional()
+})
+
+export const UpdateComplaintStatusResponse = zod.object({
+  "id": zod.string(),
+  "buildingId": zod.string(),
+  "buildingName": zod.string(),
+  "category": zod.string(),
+  "details": zod.string(),
+  "status": zod.enum(['Submitted', 'Assigned', 'In Progress', 'Resolved', 'Dismissed']),
+  "officer": zod.string().optional(),
+  "dismissReason": zod.string().optional(),
+  "filedBy": zod.string(),
+  "submittedAt": zod.string()
+})
+
+
+/**
+ * @summary List registered NGOs
+ */
+export const ListNGOsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "focus": zod.string(),
+  "address": zod.string(),
+  "tasks": zod.array(zod.string())
+})
+export const ListNGOsResponse = zod.array(ListNGOsResponseItem)
+
+
+/**
+ * @summary List volunteer bookings
+ */
+export const ListVolunteerBookingsResponseItem = zod.object({
+  "id": zod.string(),
+  "ngoName": zod.string(),
+  "ngoType": zod.string(),
+  "date": zod.string(),
+  "task": zod.string(),
+  "occasion": zod.string().optional()
+})
+export const ListVolunteerBookingsResponse = zod.array(ListVolunteerBookingsResponseItem)
+
+
+/**
+ * @summary Book a volunteer slot
+ */
+export const CreateVolunteerBookingBody = zod.object({
+  "ngoName": zod.string(),
+  "ngoType": zod.string(),
+  "date": zod.string(),
+  "task": zod.string(),
+  "occasion": zod.string().optional()
+})
+
+export const CreateVolunteerBookingResponse = zod.object({
+  "id": zod.string(),
+  "ngoName": zod.string(),
+  "ngoType": zod.string(),
+  "date": zod.string(),
+  "task": zod.string(),
+  "occasion": zod.string().optional()
+})
+
+
+/**
+ * @summary List safe spots
+ */
+export const ListSafeSpotsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "buildingId": zod.string(),
+  "note": zod.string()
+})
+export const ListSafeSpotsResponse = zod.array(ListSafeSpotsResponseItem)
+
+
+/**
+ * @summary Create a safe spot
+ */
+export const CreateSafeSpotBody = zod.object({
+  "name": zod.string(),
+  "buildingId": zod.string(),
+  "note": zod.string()
+})
+
+export const CreateSafeSpotResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "buildingId": zod.string(),
+  "note": zod.string()
+})
+
+
+/**
+ * @summary Broadcast a buddy request
+ */
+export const CreateBuddyRequestResponse = zod.object({
+  "success": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Get fake strike count for a user
+ */
+export const GetUserStrikesParams = zod.object({
+  "name": zod.coerce.string()
+})
+
+export const GetUserStrikesResponse = zod.object({
+  "strikes": zod.number().optional()
 })
 
 

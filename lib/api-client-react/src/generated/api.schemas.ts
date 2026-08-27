@@ -18,6 +18,15 @@ export const BuildingStatus = {
   red: 'red',
 } as const;
 
+export type BuildingCategory = typeof BuildingCategory[keyof typeof BuildingCategory];
+
+
+export const BuildingCategory = {
+  hospital: 'hospital',
+  government: 'government',
+  library: 'library',
+} as const;
+
 export type BuildingCoordinates = {
   lat: number;
   lng: number;
@@ -30,9 +39,98 @@ export interface Building {
   builder: string;
   rating: number;
   status: BuildingStatus;
+  category?: BuildingCategory;
   lastAudit: string;
   accessibleFeatures: string[];
   coordinates: BuildingCoordinates;
+}
+
+export type ComplaintStatus = typeof ComplaintStatus[keyof typeof ComplaintStatus];
+
+
+export const ComplaintStatus = {
+  Submitted: 'Submitted',
+  Assigned: 'Assigned',
+  In_Progress: 'In Progress',
+  Resolved: 'Resolved',
+  Dismissed: 'Dismissed',
+} as const;
+
+export interface Complaint {
+  id: string;
+  buildingId: string;
+  buildingName: string;
+  category: string;
+  details: string;
+  status: ComplaintStatus;
+  officer?: string;
+  dismissReason?: string;
+  filedBy: string;
+  submittedAt: string;
+}
+
+export interface ComplaintInput {
+  /** @minLength 1 */
+  buildingId: string;
+  /** @minLength 1 */
+  category: string;
+  /** @minLength 1 */
+  details: string;
+  /** @minLength 1 */
+  filedBy: string;
+}
+
+export type ComplaintStatusUpdateStatus = typeof ComplaintStatusUpdateStatus[keyof typeof ComplaintStatusUpdateStatus];
+
+
+export const ComplaintStatusUpdateStatus = {
+  Resolved: 'Resolved',
+  Dismissed: 'Dismissed',
+  In_Progress: 'In Progress',
+} as const;
+
+export interface ComplaintStatusUpdate {
+  status: ComplaintStatusUpdateStatus;
+  dismissReason?: string;
+}
+
+export interface Ngo {
+  id: string;
+  name: string;
+  type: string;
+  focus: string;
+  address: string;
+  tasks: string[];
+}
+
+export interface VolunteerBooking {
+  id: string;
+  ngoName: string;
+  ngoType: string;
+  date: string;
+  task: string;
+  occasion?: string;
+}
+
+export interface VolunteerBookingInput {
+  ngoName: string;
+  ngoType: string;
+  date: string;
+  task: string;
+  occasion?: string;
+}
+
+export interface SafeSpot {
+  id: string;
+  name: string;
+  buildingId: string;
+  note: string;
+}
+
+export interface SafeSpotInput {
+  name: string;
+  buildingId: string;
+  note: string;
 }
 
 export type GapSeverity = typeof GapSeverity[keyof typeof GapSeverity];
@@ -145,4 +243,12 @@ export const ListBuildingsStatus = {
   amber: 'amber',
   red: 'red',
 } as const;
+
+export type CreateBuddyRequest200 = {
+  success?: boolean;
+};
+
+export type GetUserStrikes200 = {
+  strikes?: number;
+};
 

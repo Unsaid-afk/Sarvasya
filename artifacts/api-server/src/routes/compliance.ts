@@ -5,8 +5,6 @@ import {
   SubmitAuditBody,
   SubmitAuditResponse,
 } from "@workspace/api-zod";
-import { buildings } from "./buildings";
-
 const router: IRouter = Router();
 
 router.post("/compliance/check", (req, res): void => {
@@ -72,8 +70,23 @@ router.post("/compliance/check", (req, res): void => {
       ? "All submitted parameters meet the simulated checks for RPwD Act and National Building Code requirements."
       : `${gaps.length} gap${gaps.length === 1 ? "" : "s"} found. Resolve critical items before requesting a field verification.`,
     gaps,
-    checkedAt: "2026-08-08T09:42:00+05:30",
+    checkedAt: new Date().toISOString(),
   };
+
+  // Optional: If a building ID was provided in the input, we could save the report to the building.
+  // (Assuming buildingId is added to the RunComplianceCheckBody type in the future)
+  /*
+  if ((input as any).buildingId) {
+    const currentBuildings = getBuildings();
+    const building = currentBuildings.find((item) => item.id === (input as any).buildingId);
+    if (building) {
+      building.report = report;
+      building.lastAudit = report.checkedAt;
+      saveBuildings(currentBuildings);
+    }
+  }
+  */
+
   res.json(RunComplianceCheckResponse.parse(report));
 });
 

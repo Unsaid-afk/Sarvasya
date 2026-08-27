@@ -120,6 +120,172 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Audit"
+  /complaints:
+    get:
+      operationId: listComplaints
+      tags: [complaints]
+      summary: List complaints
+      responses:
+        "200":
+          description: List of complaints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Complaint"
+    post:
+      operationId: submitComplaint
+      tags: [complaints]
+      summary: Submit a new complaint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintInput"
+      responses:
+        "201":
+          description: Submitted complaint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complaint"
+  /complaints/{id}:
+    patch:
+      operationId: updateComplaintStatus
+      tags: [complaints]
+      summary: Update complaint status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintStatusUpdate"
+      responses:
+        "200":
+          description: Updated complaint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Complaint"
+  /ngos:
+    get:
+      operationId: listNGOs
+      tags: [volunteering]
+      summary: List registered NGOs
+      responses:
+        "200":
+          description: List of NGOs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NGO"
+  /volunteer-bookings:
+    get:
+      operationId: listVolunteerBookings
+      tags: [volunteering]
+      summary: List volunteer bookings
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VolunteerBooking"
+    post:
+      operationId: createVolunteerBooking
+      tags: [volunteering]
+      summary: Book a volunteer slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VolunteerBookingInput"
+      responses:
+        "201":
+          description: Created booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VolunteerBooking"
+  /safe-spots:
+    get:
+      operationId: listSafeSpots
+      tags: [safe-spots]
+      summary: List safe spots
+      responses:
+        "200":
+          description: List of safe spots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SafeSpot"
+    post:
+      operationId: createSafeSpot
+      tags: [safe-spots]
+      summary: Create a safe spot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SafeSpotInput"
+      responses:
+        "201":
+          description: Created safe spot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafeSpot"
+  /buddy-requests:
+    post:
+      operationId: createBuddyRequest
+      tags: [buddy]
+      summary: Broadcast a buddy request
+      responses:
+        "200":
+          description: Buddy request sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+  /users/{name}/strikes:
+    get:
+      operationId: getUserStrikes
+      tags: [users]
+      summary: Get fake strike count for a user
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User strikes count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  strikes:
+                    type: number
 components:
   schemas:
     HealthStatus:
@@ -141,6 +307,9 @@ components:
         status:
           type: string
           enum: [green, amber, red]
+        category:
+          type: string
+          enum: [hospital, government, library]
         lastAudit: { type: string }
         accessibleFeatures:
           type: array
@@ -151,6 +320,85 @@ components:
           properties:
             lat: { type: number }
             lng: { type: number }
+    Complaint:
+      type: object
+      required: [id, buildingId, buildingName, category, details, status, filedBy, submittedAt]
+      properties:
+        id: { type: string }
+        buildingId: { type: string }
+        buildingName: { type: string }
+        category: { type: string }
+        details: { type: string }
+        status:
+          type: string
+          enum: [Submitted, Assigned, In Progress, Resolved, Dismissed]
+        officer: { type: string }
+        dismissReason: { type: string }
+        filedBy: { type: string }
+        submittedAt: { type: string }
+    ComplaintInput:
+      type: object
+      required: [buildingId, category, details, filedBy]
+      properties:
+        buildingId: { type: string, minLength: 1 }
+        category: { type: string, minLength: 1 }
+        details: { type: string, minLength: 1 }
+        filedBy: { type: string, minLength: 1 }
+    ComplaintStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [Resolved, Dismissed, In Progress]
+        dismissReason:
+          type: string
+    NGO:
+      type: object
+      required: [id, name, type, focus, address, tasks]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type: { type: string }
+        focus: { type: string }
+        address: { type: string }
+        tasks:
+          type: array
+          items: { type: string }
+    VolunteerBooking:
+      type: object
+      required: [id, ngoName, ngoType, date, task]
+      properties:
+        id: { type: string }
+        ngoName: { type: string }
+        ngoType: { type: string }
+        date: { type: string }
+        task: { type: string }
+        occasion: { type: string }
+    VolunteerBookingInput:
+      type: object
+      required: [ngoName, ngoType, date, task]
+      properties:
+        ngoName: { type: string }
+        ngoType: { type: string }
+        date: { type: string }
+        task: { type: string }
+        occasion: { type: string }
+    SafeSpot:
+      type: object
+      required: [id, name, buildingId, note]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        buildingId: { type: string }
+        note: { type: string }
+    SafeSpotInput:
+      type: object
+      required: [name, buildingId, note]
+      properties:
+        name: { type: string }
+        buildingId: { type: string }
+        note: { type: string }
     Gap:
       type: object
       required: [id, title, severity, reference, recommendation]

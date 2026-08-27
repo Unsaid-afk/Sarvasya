@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { BuildingCategory } from './buildingCategory';
 import type { BuildingCoordinates } from './buildingCoordinates';
 import type { BuildingStatus } from './buildingStatus';
 
@@ -15,6 +16,7 @@ export interface Building {
   builder: string;
   rating: number;
   status: BuildingStatus;
+  category?: BuildingCategory;
   lastAudit: string;
   accessibleFeatures: string[];
   coordinates: BuildingCoordinates;
