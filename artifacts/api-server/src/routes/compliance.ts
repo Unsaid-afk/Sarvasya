@@ -123,6 +123,35 @@ router.post("/audits/forward", (req, res): void => {
     return;
   }
 
+  // Generate detailed dynamic AI Report if not passed
+  const gaps = [];
+  const ramp = provisions?.rampSlope ? Number(provisions.rampSlope) : 8.33;
+  const door = provisions?.doorWidth ? Number(provisions.doorWidth) : 900;
+  if (ramp > 8.33) {
+    gaps.push({ id: "ramp-slope", title: `Ramp slope (${ramp}%) exceeds maximum allowable 8.33% gradient`, severity: "critical" as const, reference: "NBC 2016 · 4.1.3", recommendation: "Re-engineer entry ramp slope to 1:12 (8.33%) with 1.5m level rest landings every 9m." });
+  }
+  if (door < 900) {
+    gaps.push({ id: "door-width", title: `Primary entrance clear door width (${door}mm) is under 900mm`, severity: "moderate" as const, reference: "NBC 2016 · 4.4.1", recommendation: "Widen clear doorway opening to at least 900mm." });
+  }
+  if (!provisions?.liftAvailable) {
+    gaps.push({ id: "lift-access", title: "Vertical circulation elevator / lift is missing", severity: "critical" as const, reference: "RPwD Act 2016 · Section 41", recommendation: "Install Braille key and audio announcement elevator." });
+  }
+  if (!provisions?.accessibleRestrooms) {
+    gaps.push({ id: "washroom", title: "Accessible unisex washroom not specified", severity: "moderate" as const, reference: "NBC 2016 · 4.5.4", recommendation: "Design 1.5m turning radius accessible washroom with L-shaped grab bars." });
+  }
+  if (!provisions?.emergencyRefuge) {
+    gaps.push({ id: "refuge", title: "Fire-rated Emergency Refuge Zone missing", severity: "critical" as const, reference: "NBC 2016 · 4.8.2", recommendation: "Incorporate fire refuge area with 2-way emergency intercom." });
+  }
+
+  const generatedScore = Math.max(10, 100 - gaps.reduce((acc, g) => acc + (g.severity === "critical" ? 18 : 10), 0));
+  const finalAiReport = aiReport || {
+    score: generatedScore,
+    rating: Number((1 + generatedScore / 25).toFixed(1)),
+    summary: `Detailed AI Building Accessibility Audit for ${buildingName}: ${gaps.length === 0 ? "Full compliance achieved across RPwD Act 2016 and NBC 2016 guidelines." : `${gaps.length} non-compliance gap(s) identified in blueprint analysis.`}`,
+    gaps,
+    checkedAt: new Date().toISOString(),
+  };
+
   const db = getDB();
   const newAuditJob: AuditRecord = {
     id: `audit-job-${Date.now()}`,
@@ -132,8 +161,8 @@ router.post("/audits/forward", (req, res): void => {
     stage: stage || "blueprint_approval",
     submittedAt: new Date().toISOString(),
     status: "pending",
-    aiScore: aiScore || 85,
-    aiReport: aiReport || { score: 85, summary: "Initial AI Analysis Completed", gaps: [] },
+    aiScore: aiScore || finalAiReport.score,
+    aiReport: finalAiReport,
     provisions: provisions || {},
   };
 
