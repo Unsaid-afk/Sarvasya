@@ -11,6 +11,7 @@ import helplinesRouter from "./helplines";
 import usersRouter from "./users";
 import authRouter from "./auth";
 import emergencyRouter from "./emergency";
+import trackingRouter from "./tracking";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(helplinesRouter);
 router.use(usersRouter);
 router.use(authRouter);
 router.use(emergencyRouter);
+router.use(trackingRouter);
 
 export default router;

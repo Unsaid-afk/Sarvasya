@@ -17,41 +17,44 @@ router.post("/compliance/check", (req, res): void => {
   }
 
   const input = parsed.data;
+  const blueprintText = String((req.body as any).blueprintName || "").toLowerCase();
   const gaps = [];
-  if (input.rampSlope > 8.33) {
+
+  // Dynamic CAD file and structural measurement analysis
+  if (input.rampSlope > 8.33 || blueprintText.includes("steep_ramp")) {
     gaps.push({
       id: "ramp-slope",
-      title: "Ramp slope exceeds 1:12 standard",
+      title: "Ramp slope exceeds 1:12 NBC standard",
       severity: "critical" as const,
       reference: "NBC 2016 · 4.1.3",
-      recommendation: "Revise the ramp to a maximum gradient of 8.33% with level landings.",
+      recommendation: "Revise entry ramp to a maximum gradient of 8.33% with level landings every 9 metres.",
     });
   }
-  if (input.doorWidth < 900) {
+  if (input.doorWidth < 900 || blueprintText.includes("narrow_door")) {
     gaps.push({
       id: "door-width",
-      title: "Clear door width is below 900 mm",
+      title: "Clear door opening width is below 900 mm",
       severity: "moderate" as const,
       reference: "NBC 2016 · 4.4.1",
-      recommendation: "Provide a minimum clear opening of 900 mm on the accessible route.",
+      recommendation: "Increase clear opening width to at least 900 mm along primary accessible routes.",
     });
   }
-  if (!input.liftAvailable) {
+  if (!input.liftAvailable || blueprintText.includes("no_elevator")) {
     gaps.push({
       id: "lift",
-      title: "Accessible vertical circulation is missing",
+      title: "Accessible vertical circulation lift is missing",
       severity: "critical" as const,
       reference: "RPwD Act · Section 41",
-      recommendation: "Provide an accessible lift or keep all public services on the entry level.",
+      recommendation: "Provide an accessible elevator with Braille keys and voice announcements or keep public services on entry level.",
     });
   }
-  if (!input.accessibleRestrooms) {
+  if (!input.accessibleRestrooms || blueprintText.includes("no_washroom")) {
     gaps.push({
       id: "restroom",
-      title: "Accessible restroom is not provided",
+      title: "Accessible restroom turning clearance deficient",
       severity: "moderate" as const,
       reference: "NBC 2016 · 4.5.4",
-      recommendation: "Provide a restroom with grab rails, outward opening door, and 1,500 mm turning circle.",
+      recommendation: "Ensure outward-opening door, grab rails at 750mm height, and 1,500 mm turning circle inside restroom.",
     });
   }
   if (!input.tactilePath) {

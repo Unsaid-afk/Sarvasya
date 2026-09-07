@@ -94,4 +94,33 @@ router.get("/emergency/alerts", (_req, res): void => {
   res.json({ alerts: emergencyLog });
 });
 
+router.post("/emergency/webhook-sms", async (req, res): Promise<void> => {
+  const { webhookUrl, recipientPhone, textMessage } = req.body;
+
+  if (!webhookUrl || !recipientPhone) {
+    res.status(400).json({ error: "Webhook URL and recipient phone are required." });
+    return;
+  }
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: recipientPhone,
+        message: textMessage || "EMERGENCY SOS ALERT",
+        dispatchedAt: new Date().toISOString(),
+      }),
+    });
+
+    res.json({
+      success: response.ok,
+      status: response.status,
+      provider: "Custom Universal Webhook Gateway",
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Webhook SMS dispatch failed." });
+  }
+});
+
 export default router;

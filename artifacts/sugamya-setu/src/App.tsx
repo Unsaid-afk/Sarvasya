@@ -211,9 +211,21 @@ function Shell({ children }: { children: ReactNode }) {
       setTrackingLocation("Acquiring GPS signal...");
       watchId = navigator.geolocation.watchPosition(
         (position) => {
-          setTrackingLocation(`Lat: ${position.coords.latitude.toFixed(5)}, Lng: ${position.coords.longitude.toFixed(5)}`);
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setTrackingLocation(`GPS (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+          fetch("/api/tracking/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: profile.name || "Aarya Patel",
+              latitude: lat,
+              longitude: lng,
+              addressName: `Live GPS (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+            }),
+          }).catch(() => {});
         },
-        (error) => {
+        () => {
           setTrackingLocation("Location access denied or unavailable");
         },
         { enableHighAccuracy: true }
@@ -226,7 +238,7 @@ function Shell({ children }: { children: ReactNode }) {
         navigator.geolocation.clearWatch(watchId);
       }
     };
-  }, [trackingActive]);
+  }, [trackingActive, profile?.name]);
 
   useEffect(() => {
     const root = document.documentElement;
