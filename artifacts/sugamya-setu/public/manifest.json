@@ -1,0 +1,22 @@
+{
+  "short_name": "Sugamya Setu",
+  "name": "Sugamya Setu - Universal Accessibility Bridge",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/logo.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0d1117",
+  "theme_color": "#0d9488",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "description": "Accessible infrastructure auditing, wayfinding, and emergency dispatch system."
+}

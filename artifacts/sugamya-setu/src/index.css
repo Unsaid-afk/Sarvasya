@@ -52,13 +52,13 @@
   --accent-foreground: 60 9% 98%;
   --destructive: 3 65% 42%;
   --destructive-foreground: 60 9% 98%;
-  --sidebar: 12 6% 15%;
-  --sidebar-foreground: 60 9% 98%;
-  --sidebar-border: 12 6% 22%;
-  --sidebar-primary: 40 96% 40%;
-  --sidebar-primary-foreground: 12 6% 15%;
-  --sidebar-accent: 86 45% 20%;
-  --sidebar-accent-foreground: 60 9% 98%;
+  --sidebar: 20 5% 15.3%;
+  --sidebar-foreground: 60 14% 98%;
+  --sidebar-border: 20 5% 20%;
+  --sidebar-primary: 86 78% 27%;
+  --sidebar-primary-foreground: 60 14% 98%;
+  --sidebar-accent: 20 5% 20%;
+  --sidebar-accent-foreground: 60 14% 98%;
   --app-font-sans: 'Manrope', sans-serif;
   --app-font-serif: 'Source Serif 4', Georgia, serif;
   --app-font-mono: 'DM Mono', monospace;
@@ -317,3 +317,125 @@ html.text-size-lg {
 .bg-ochre { background-color: #CA8A04 !important; }
 .text-ochre { color: #CA8A04 !important; }
 .border-ochre { border-color: #CA8A04 !important; }
+
+/* Reduced motion — disable ALL animations for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Slow spin for accessibility widget ring */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin-slow 8s linear infinite; }
+
+/* Glassmorphism Styles */
+.glass-card {
+  background: rgba(250, 250, 249, 0.7); /* Eggshell White semi-transparent */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(250, 250, 249, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(41, 37, 36, 0.1); /* Soft Charcoal shadow */
+  border-radius: 1.5rem; /* rounded-3xl */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dark .glass-card {
+  background: rgba(41, 37, 36, 0.45); /* Charcoal Brown semi-transparent */
+  border: 1px solid rgba(250, 250, 249, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px 0 rgba(41, 37, 36, 0.15);
+}
+
+.dark .glass-card:hover {
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* Score ring — Soft glass circle */
+.score-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 9999px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(250,250,249,0.9) 0%, rgba(250,250,249,0.6) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(250, 250, 249, 0.8);
+  box-shadow: 0 8px 24px rgba(41, 37, 36, 0.12), inset 0 2px 10px rgba(255, 255, 255, 0.5);
+  color: var(--score-color);
+}
+.dark .score-ring {
+  background: linear-gradient(135deg, rgba(41,37,36,0.8) 0%, rgba(41,37,36,0.4) 100%);
+  border: 1px solid rgba(250, 250, 249, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 2px 10px rgba(255, 255, 255, 0.05);
+}
+
+.score-ring[data-status="green"] { --score-color: #4D7C0F; } /* Moss Green */
+.score-ring[data-status="amber"] { --score-color: #CA8A04; } /* Ochre Yellow */
+.score-ring[data-status="red"]   { --score-color: #b74740; } /* Keep red for danger */
+
+/* Detail page hero - soft gradient background */
+.detail-hero {
+  background: linear-gradient(145deg, #FAFAF9 0%, #f2f2ef 100%);
+  border-bottom: 1px solid rgba(41, 37, 36, 0.05);
+}
+.dark .detail-hero {
+  background: linear-gradient(145deg, #1c1918 0%, #292524 100%);
+  border-bottom: 1px solid rgba(250, 250, 249, 0.05);
+}
+
+/* Detail Card - Glassmorphism style */
+.detail-card {
+  animation: none;
+  background: rgba(250, 250, 249, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(250, 250, 249, 0.6);
+  box-shadow: 0 10px 40px -10px rgba(41, 37, 36, 0.1);
+  border-radius: 1.5rem;
+}
+.dark .detail-card {
+  background: rgba(41, 37, 36, 0.5);
+  border: 1px solid rgba(250, 250, 249, 0.08);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.4);
+}
+
+/* Sticky Action Bar - Glassmorphic */
+.sticky-actions {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  background: rgba(250, 250, 249, 0.85);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(250, 250, 249, 0.4);
+  box-shadow: 0 -4px 20px rgba(41, 37, 36, 0.08);
+  display: flex;
+  gap: 1rem;
+  z-index: 50;
+}
+.dark .sticky-actions {
+  background: rgba(41, 37, 36, 0.85);
+  border-top: 1px solid rgba(250, 250, 249, 0.1);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 768px) {
+  .sticky-actions { display: none; }
+}
+@media (max-width: 767px) {
+  /* Push main content up to account for sticky bar */
+  .detail-page-content { padding-bottom: 5rem; }
+}

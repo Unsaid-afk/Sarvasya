@@ -9,6 +9,8 @@ import safeSpotsRouter from "./safe-spots";
 import buddyRouter from "./buddy";
 import helplinesRouter from "./helplines";
 import usersRouter from "./users";
+import authRouter from "./auth";
+import emergencyRouter from "./emergency";
 
 const router: IRouter = Router();
 
@@ -22,5 +24,7 @@ router.use(safeSpotsRouter);
 router.use(buddyRouter);
 router.use(helplinesRouter);
 router.use(usersRouter);
+router.use(authRouter);
+router.use(emergencyRouter);
 
 export default router;

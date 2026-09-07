@@ -186,15 +186,86 @@ const initialBuildings: BuildingRecord[] = [
   },
 ];
 
+export type UserRecord = {
+  id: string;
+  email: string;
+  passwordHash: string;
+  name: string;
+  role: string;
+  fakeStrikes: number;
+  createdAt: string;
+};
+
+export type BuddyRequestRecord = {
+  id: string;
+  userName: string;
+  contactNumber: string;
+  location: string;
+  assistanceType: string;
+  status: "pending" | "accepted" | "completed";
+  acceptedBy?: string;
+  createdAt: string;
+};
+
+export type DetailedAuditorReport = {
+  auditorName: string;
+  auditorDesignation: string;
+  certificateId: string;
+  inspectionDate: string;
+  rampSlopeVerified: string;
+  doorClearanceVerified: string;
+  tactilePavingQuality: string;
+  washroomClearanceVerified: boolean;
+  brailleSignageMounted: boolean;
+  emergencyRefugeVerified: boolean;
+  detailedObservations: string;
+  correctiveActionsRequired: string;
+  attachedProofFiles: string[];
+  recommendationDecision: "approved" | "rejected";
+};
+
+export type AuditRecord = {
+  id: string;
+  buildingId?: string;
+  buildingName: string;
+  builderName: string;
+  blueprintName?: string;
+  stage: "blueprint_approval" | "on_site_inspection";
+  submittedAt: string;
+  status: "pending" | "accepted_in_review" | "delayed" | "approved" | "rejected";
+  aiScore?: number;
+  aiReport?: any;
+  provisions?: Record<string, boolean>;
+  auditorNotes?: string;
+  delayReason?: string;
+  auditorName?: string;
+  reviewedAt?: string;
+  detailedReport?: DetailedAuditorReport;
+};
+
 type DBState = {
+  users: UserRecord[];
   buildings: BuildingRecord[];
   complaints: Complaint[];
   ngos: Ngo[];
   volunteerBookings: VolunteerBooking[];
   safeSpots: SafeSpot[];
+  buddyRequests: BuddyRequestRecord[];
+  auditQueue: AuditRecord[];
 };
 
 const defaultState: DBState = {
+  users: [
+    {
+      id: "demo-user-1",
+      email: "citizen@sugamyasetu.in",
+      passwordHash: "demo_hashed_password",
+      name: "Aarya Patel",
+      role: "citizen",
+      fakeStrikes: 0,
+      createdAt: new Date().toISOString(),
+    }
+  ],
   buildings: initialBuildings,
   complaints: [],
   ngos: [
@@ -206,6 +277,75 @@ const defaultState: DBState = {
   safeSpots: [
     { id: "spot-1", name: "North Wing Refuge Area", buildingId: "ssg-hospital", note: "Fireproof doors. Oxygen masks available in red bin." },
     { id: "spot-2", name: "Ground Floor Atrium", buildingId: "vadodara-civic-centre", note: "Clear of glass windows. Stretcher access available." }
+  ],
+  buddyRequests: [
+    {
+      id: "buddy-1",
+      userName: "Ramesh Shah",
+      contactNumber: "+91 98250 11223",
+      location: "SSG Hospital Entry Gate 2",
+      assistanceType: "Wheelchair escort to OPD",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    }
+  ],
+  auditQueue: [
+    {
+      id: "audit-job-01",
+      buildingName: "Alkapuri Civic Complex Phase 2",
+      builderName: "Vadodara Urban Development Authority",
+      blueprintName: "Alkapuri_Phase2_Layout_v3.dwg",
+      stage: "blueprint_approval",
+      submittedAt: new Date().toISOString(),
+      status: "pending",
+      aiScore: 92,
+      aiReport: {
+        score: 92,
+        rating: 4.6,
+        summary: "High compliance with NBC 2016. Main entry ramp and tactile paving verified.",
+        gaps: [
+          {
+            id: "gap-signage",
+            title: "Braille Signage Height Adjustment",
+            severity: "minor",
+            reference: "NBC 2016 4.3.2",
+            recommendation: "Ensure tactile Braille plaques are mounted at 1.4m height."
+          }
+        ]
+      },
+      provisions: {
+        liftAvailable: true,
+        accessibleRestrooms: true,
+        tactilePath: true,
+        accessibleParking: true,
+        signageContrast: true,
+        emergencyRefuge: false,
+      }
+    },
+    {
+      id: "audit-job-02",
+      buildingName: "SSG Hospital New Trauma Wing",
+      builderName: "Dept of Health, Govt of Gujarat",
+      blueprintName: "Trauma_Wing_Onsite_Plan.pdf",
+      stage: "on_site_inspection",
+      submittedAt: new Date().toISOString(),
+      status: "pending",
+      aiScore: 96,
+      aiReport: {
+        score: 96,
+        rating: 4.8,
+        summary: "Excellent structural adherence during construction stage.",
+        gaps: []
+      },
+      provisions: {
+        liftAvailable: true,
+        accessibleRestrooms: true,
+        tactilePath: true,
+        accessibleParking: true,
+        signageContrast: true,
+        emergencyRefuge: true,
+      }
+    }
   ]
 };
 

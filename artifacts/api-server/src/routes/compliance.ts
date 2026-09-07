@@ -5,6 +5,8 @@ import {
   SubmitAuditBody,
   SubmitAuditResponse,
 } from "@workspace/api-zod";
+import { getDB, saveDB, getBuildings, saveBuildings, type AuditRecord } from "../lib/db";
+
 const router: IRouter = Router();
 
 router.post("/compliance/check", (req, res): void => {
@@ -73,24 +75,8 @@ router.post("/compliance/check", (req, res): void => {
     checkedAt: new Date().toISOString(),
   };
 
-  // Optional: If a building ID was provided in the input, we could save the report to the building.
-  // (Assuming buildingId is added to the RunComplianceCheckBody type in the future)
-  /*
-  if ((input as any).buildingId) {
-    const currentBuildings = getBuildings();
-    const building = currentBuildings.find((item) => item.id === (input as any).buildingId);
-    if (building) {
-      building.report = report;
-      building.lastAudit = report.checkedAt;
-      saveBuildings(currentBuildings);
-    }
-  }
-  */
-
   res.json(RunComplianceCheckResponse.parse(report));
 });
-
-import { getBuildings, saveBuildings } from "../lib/db";
 
 router.post("/audits", (req, res): void => {
   const parsed = SubmitAuditBody.safeParse(req.body);
@@ -117,6 +103,84 @@ router.post("/audits", (req, res): void => {
   saveBuildings(currentBuildings);
   
   res.status(201).json(SubmitAuditResponse.parse(audit));
+});
+
+// --- Enhanced Auditor Workspace API Endpoints ---
+
+router.get("/audits/queue", (_req, res): void => {
+  const db = getDB();
+  res.json({ queue: db.auditQueue || [] });
+});
+
+router.post("/audits/forward", (req, res): void => {
+  const { buildingName, builderName, blueprintName, stage, aiScore, aiReport, provisions } = req.body;
+
+  if (!buildingName || !builderName) {
+    res.status(400).json({ error: "Building name and builder name are required." });
+    return;
+  }
+
+  const db = getDB();
+  const newAuditJob: AuditRecord = {
+    id: `audit-job-${Date.now()}`,
+    buildingName,
+    builderName,
+    blueprintName: blueprintName || "Building_Blueprint.pdf",
+    stage: stage || "blueprint_approval",
+    submittedAt: new Date().toISOString(),
+    status: "pending",
+    aiScore: aiScore || 85,
+    aiReport: aiReport || { score: 85, summary: "Initial AI Analysis Completed", gaps: [] },
+    provisions: provisions || {},
+  };
+
+  if (!db.auditQueue) db.auditQueue = [];
+  db.auditQueue.unshift(newAuditJob);
+  saveDB(db);
+
+  res.status(201).json({ success: true, auditJob: newAuditJob });
+});
+
+router.patch("/audits/queue/:id/status", (req, res): void => {
+  const { id } = req.params;
+  const { status, delayReason, auditorNotes, auditorName, detailedReport } = req.body;
+
+  const db = getDB();
+  const job = (db.auditQueue || []).find((j) => j.id === id);
+
+  if (!job) {
+    res.status(404).json({ error: "Audit job not found." });
+    return;
+  }
+
+  if (status) job.status = status;
+  if (delayReason) job.delayReason = delayReason;
+  if (auditorNotes) job.auditorNotes = auditorNotes;
+  if (auditorName) job.auditorName = auditorName;
+  if (detailedReport) job.detailedReport = detailedReport;
+  job.reviewedAt = new Date().toISOString();
+
+  // If approved or rejected, attach audit history to building record
+  if (job.buildingName) {
+    const building = db.buildings.find(
+      (b) => b.name.toLowerCase() === job.buildingName.toLowerCase() || b.id === job.buildingId
+    );
+    if (building) {
+      building.audit = {
+        id: job.id,
+        auditorName: auditorName || job.auditorName || "Inspector Auditor",
+        submittedAt: new Date().toISOString(),
+        status: status === "approved" ? "verified" : "pending",
+        summary: auditorNotes || detailedReport?.detailedObservations || "Field inspection completed.",
+      };
+      if (status === "approved") {
+        building.lastAudit = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+      }
+    }
+  }
+
+  saveDB(db);
+  res.json({ success: true, auditJob: job });
 });
 
 export default router;

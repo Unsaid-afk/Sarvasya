@@ -20,6 +20,7 @@ import {
 , Bell, CheckCircle2, AlertCircle} from 'lucide-react';
 import { Link, Route, Switch, Router as WouterRouter, useLocation, useParams } from 'wouter';
 import NotFound from '@/pages/not-found';
+import { CameraOcrModal } from '@/components/CameraOcrModal';
 
 const queryClient = new QueryClient();
 
@@ -59,45 +60,12 @@ const useNotifications = () => {
 
 function BrandMark() {
   return <div className="flex items-center gap-3">
-    <div className="relative flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden shadow-md border border-[hsl(var(--accent))] bg-white">
+    <div className="relative flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden shadow-md border border-accent bg-white">
       <img src="/logo.jpg" alt="Sarvasya Logo" className="h-full w-full object-cover" />
     </div>
     <div>
-      <div className="font-serif text-xl font-bold tracking-tight text-[hsl(var(--sidebar-foreground))]">Sarvasya</div>
-      <div className="font-data text-[9px] uppercase tracking-[.25em] text-[hsl(var(--accent))] font-semibold">Access for all
-        {/* Transparent Complaints Section */}
-        <div className="col-span-1 lg:col-span-2 mt-2 space-y-6">
-          <section className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 shadow-civic md:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="font-data text-[10px] uppercase tracking-[.16em] text-[hsl(var(--primary))]">Public Accountability</div>
-                <h2 className="mt-1 font-display text-2xl font-bold">Community Complaints</h2>
-              </div>
-              <AlertOctagon className="text-[hsl(var(--primary))]" />
-            </div>
-            
-            {buildingComplaints.length === 0 ? (
-              <div className="text-sm text-muted-foreground p-4 bg-slate-50 rounded-lg text-center border border-dashed">No complaints have been filed for this building.</div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {buildingComplaints.map(c => (
-                  <button key={c.id} onClick={() => setSelectedComplaint(c)} className="text-left border rounded-xl p-4 hover:shadow-md hover:border-[hsl(var(--primary))] transition-all bg-white relative overflow-hidden group">
-                    <div className={`absolute top-0 left-0 w-1 h-full ${c.status === 'Resolved' ? 'bg-green-500' : c.status === 'Dismissed' ? 'bg-red-500' : 'bg-yellow-500'}`}></div>
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-data text-[9px] uppercase tracking-wider text-muted-foreground">{c.id}</span>
-                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${c.status === 'Resolved' ? 'bg-green-100 text-green-700' : c.status === 'Dismissed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{c.status}</span>
-                    </div>
-                    <h4 className="font-bold text-sm group-hover:text-[hsl(var(--primary))]">{c.category}</h4>
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{c.details}</p>
-                    <div className="mt-3 text-[10px] text-[hsl(var(--primary))] font-semibold flex items-center gap-1">View Timeline <ChevronRight size={12}/></div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-
-      </div>
+      <div className="font-serif text-xl font-bold tracking-tight text-sidebar-foreground">Sarvasya</div>
+      <div className="font-data text-[9px] uppercase tracking-[.25em] text-accent font-semibold">Access for all</div>
     </div>
   </div>;
 }
@@ -117,7 +85,7 @@ function useAppAPI() {
 
   const [profile, setProfile] = useState<any>(() => {
     const cached = localStorage.getItem("sarvasya_profile");
-    return cached ? JSON.parse(cached) : { name: "Asha Rao", role: "disabled_user", email: "asha@accessnow.org", fakeStrikes: 0 };
+    return cached ? JSON.parse(cached) : {};
   });
 
   const { data: strikesData } = useGetUserStrikes(profile.name, { query: { enabled: !!profile.name, queryKey: ['strikes', profile.name] } as any });
@@ -125,6 +93,11 @@ function useAppAPI() {
   const registerUser = (user: any) => {
     setProfile(user);
     localStorage.setItem("sarvasya_profile", JSON.stringify(user));
+  };
+
+  const logoutUser = () => {
+    setProfile({});
+    localStorage.removeItem("sarvasya_profile");
   };
 
   const addComplaint = async (complaint: any) => {
@@ -163,25 +136,31 @@ function useAppAPI() {
     updateComplaintStatus,
     addVolunteerBooking,
     addSafeSpot,
-    registerUser
+    registerUser,
+    logoutUser
   };
 }
 
 function Shell({ children }: { children: ReactNode }) {
 
+  const { profile, registerUser, logoutUser } = useAppAPI();
+  const [regName, setRegName] = useState(profile.name || "");
+  const [regEmail, setRegEmail] = useState(profile.email || "");
+  const [regRole, setRegRole] = useState(profile.role || "citizen");
+
   const navItems = useMemo(() => {
     const allItems = [
-      { href: '/', label: 'Overview', icon: LayoutDashboard, roles: ['builder', 'auditor', 'disabled_user', 'regular_user'] },
-      { href: '/audit', label: 'Architect Audit', icon: FileCheck2, roles: ['builder'] },
-      { href: '/inspections', label: 'Field Inspection', icon: ClipboardCheck, roles: ['auditor'] },
-      { href: '/complaints', label: 'Complaints Pipeline', icon: AlertOctagon, roles: ['builder', 'disabled_user', 'regular_user', 'auditor'] },
-      { href: '/volunteering', label: 'Volunteering & NGOs', icon: Heart, roles: ['regular_user', 'disabled_user'] },
-      { href: '/helplines', label: 'Helplines', icon: Phone, roles: ['disabled_user', 'regular_user', 'builder', 'auditor'] },
-      { href: '/safe-spots', label: 'Safe Spots', icon: ShieldCheck, roles: ['disabled_user', 'regular_user'] },
-      { href: '/buddy', label: 'Find a Buddy', icon: Users, roles: ['disabled_user', 'regular_user'] }
+      { href: '/', label: 'Overview', icon: LayoutDashboard, roles: ['builder', 'auditor', 'disabled_user', 'regular_user', 'admin'] },
+      { href: '/audit', label: 'Architect Audit', icon: FileCheck2, roles: ['builder', 'admin'] },
+      { href: '/inspections', label: 'Field Inspection', icon: ClipboardCheck, roles: ['auditor', 'admin'] },
+      { href: '/complaints', label: 'Complaints Pipeline', icon: AlertOctagon, roles: ['builder', 'disabled_user', 'regular_user', 'auditor', 'admin'] },
+      { href: '/volunteering', label: 'Volunteering & NGOs', icon: Heart, roles: ['regular_user', 'disabled_user', 'admin'] },
+      { href: '/helplines', label: 'Helplines', icon: Phone, roles: ['disabled_user', 'regular_user', 'builder', 'auditor', 'admin'] },
+      { href: '/safe-spots', label: 'Safe Spots', icon: ShieldCheck, roles: ['disabled_user', 'regular_user', 'admin'] },
+      { href: '/buddy', label: 'Find a Buddy', icon: Users, roles: ['disabled_user', 'regular_user', 'admin'] }
     ];
-    return allItems.filter(item => item.roles.includes(profile.role));
-  }, [profile.role]);
+    return allItems.filter(item => item.roles.includes(profile?.role));
+  }, [profile?.role]);
 
   const [location] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -202,18 +181,15 @@ function Shell({ children }: { children: ReactNode }) {
   const [voiceActive, setVoiceActive] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [simulatedSign, setSimulatedSign] = useState<string | null>(null);
+  const [isCameraOcrOpen, setIsCameraOcrOpen] = useState(false);
 
   // Easy Registration Modal
-  const [showRegModal, setShowRegModal] = useState(false);
+  const [showRegModal, setShowRegModal] = useState(!profile?.name);
+  const [showToolbar, setShowToolbar] = useState(true);
 
   const { notifs, markAllRead } = useNotifications();
   const [showNotifs, setShowNotifs] = useState(false);
   const unreadCount = notifs.filter(n => !n.read).length;
-
-  const { profile, registerUser } = useAppAPI();
-  const [regName, setRegName] = useState(profile.name || "");
-  const [regEmail, setRegEmail] = useState(profile.email || "");
-  const [regRole, setRegRole] = useState(profile.role || "citizen");
 
   // Offline status
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -290,15 +266,61 @@ function Shell({ children }: { children: ReactNode }) {
     setReading(true);
   };
 
-  const triggerEmergency = () => {
+  const triggerEmergency = async () => {
     setEmergencyAlert(true);
     if ('speechSynthesis' in window) {
       window.speechSynthesis.speak(new SpeechSynthesisUtterance("Emergency alert broadcasted silently. Nearby volunteers and security are notified."));
     }
+    try {
+      await fetch("/api/emergency/alert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderName: "Aarya Patel",
+          contactNumber: "+91 98765 43210",
+          disabilityType: "Mobility & Hearing Assistance",
+          address: "Vadodara Ward 15 Civic Area",
+        }),
+      });
+    } catch (err) {
+      console.warn("Could not dispatch backend SOS alert:", err);
+    }
     setTimeout(() => setEmergencyAlert(false), 5000);
   };
 
-  // Mock voice control loop
+  useEffect(() => {
+    if (!voiceActive) return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceTranscript("Browser speech recognition unavailable. Use quick buttons below.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event: any) => {
+      const current = event.resultIndex;
+      const transcript = event.results[current][0].transcript;
+      setVoiceTranscript(`Heard: "${transcript}"`);
+      handleVoiceCommand(transcript.toLowerCase());
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      console.warn("Speech recognition error:", e);
+    }
+
+    return () => {
+      try {
+        recognition.stop();
+      } catch {}
+    };
+  }, [voiceActive]);
+
   const toggleVoiceMode = () => {
     if (voiceActive) {
       setVoiceActive(false);
@@ -306,7 +328,7 @@ function Shell({ children }: { children: ReactNode }) {
       return;
     }
     setVoiceActive(true);
-    setVoiceTranscript("Listening for commands (e.g. 'go to audits', 'read signage')");
+    setVoiceTranscript("Listening for speech commands (e.g. 'go to audits', 'read signage')...");
   };
 
   const handleVoiceCommand = (cmd: string) => {
@@ -325,7 +347,7 @@ function Shell({ children }: { children: ReactNode }) {
 
   return <div className="civic-shell">
     <a href="#main-content" className="skip-link">Skip to main content</a>
-    <aside className="civic-nav desktop-nav bg-[hsl(var(--sidebar))] px-5 py-6 text-[hsl(var(--sidebar-foreground))]" aria-label="Sidebar navigation">
+    <aside className="civic-nav desktop-nav bg-sidebar px-5 py-6 text-sidebar-foreground" aria-label="Sidebar navigation">
       <BrandMark />
       
       {/* Offline Status & User profile in navigation */}
@@ -337,7 +359,7 @@ function Shell({ children }: { children: ReactNode }) {
           </div>
           
           <div className="relative">
-            <button onClick={() => setShowNotifs(!showNotifs)} className="relative text-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] flex items-center p-1">
+            <button onClick={() => setShowNotifs(!showNotifs)} className="relative text-accent hover:text-accent-foreground flex items-center p-1">
               <Bell size={18} />
               {unreadCount > 0 && <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-bold">{unreadCount}</span>}
             </button>
@@ -363,29 +385,36 @@ function Shell({ children }: { children: ReactNode }) {
             )}
           </div>
 
-          <button onClick={() => setShowRegModal(true)} className="text-[hsl(var(--accent))] hover:underline flex items-center gap-1 font-bold">
-            <User size={13} /> {profile.name ? 'Edit' : 'Login'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowRegModal(true)} className="text-accent hover:underline flex items-center gap-1 font-bold">
+              <User size={13} /> {profile.name ? 'Edit' : 'Login'}
+            </button>
+            {profile.name && (
+              <button onClick={logoutUser} className="text-red-400 hover:underline flex items-center gap-1 font-bold text-xs border-l border-white/20 pl-3">
+                Logout
+              </button>
+            )}
+          </div>
         </div>
         {profile.name && (
-          <div className="text-[hsl(var(--sidebar-foreground)/.7)] truncate">
+          <div className="text-sidebar-foreground/70 truncate">
             {profile.name} ({profile.role})
             {profile.fakeStrikes > 0 && <div className="text-red-400 font-semibold text-[10px]">Strikes: {profile.fakeStrikes}/3</div>}
           </div>
         )}
       </div>
 
-      <div className="mt-6 mb-3 px-3 font-data text-[10px] uppercase tracking-[.18em] text-[hsl(var(--sidebar-foreground)/.48)]">Workspace</div>
+      <div className="mt-6 mb-3 px-3 font-data text-[10px] uppercase tracking-[.18em] text-sidebar-foreground/48">Workspace</div>
       <nav className="space-y-1" aria-label="Primary navigation">
-        {navItems.map(({ href, label, icon: Icon }) => <Link key={href} href={href} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`} className={`nav-link flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-semibold ${location === href ? 'bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-accent-foreground))]' : 'text-[hsl(var(--sidebar-foreground)/.72)] hover:bg-[hsl(var(--sidebar-accent)/.7)] hover:text-[hsl(var(--sidebar-foreground))]'}`}>
-          <Icon size={18} strokeWidth={1.8} /><span>{label}</span>{location === href && <ChevronRight className="ml-auto" size={15} />}
+        {navItems.map(({ href, label, icon: Icon }) => <Link key={href} href={href} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`} className={`nav-link flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-semibold transition-colors ${location === href ? 'text-sidebar-foreground' : 'text-sidebar-foreground/60 hover:bg-white/5 hover:text-sidebar-foreground'}`}>
+          <Icon size={18} strokeWidth={location === href ? 2.5 : 1.8} /><span>{label}</span>{location === href && <ChevronRight className="ml-auto opacity-50" size={15} />}
         </Link>)}
       </nav>
       
       {/* Remote Tracking Status Panel */}
       {trackingActive && (
-        <div className="mt-4 rounded-xl border border-dashed border-[hsl(var(--accent))] bg-[hsl(var(--sidebar-accent)/.3)] p-3 text-xs">
-          <div className="flex items-center gap-2 text-[hsl(var(--accent))] font-bold">
+        <div className="mt-4 rounded-xl border border-dashed border-accent bg-sidebar-accent/30 p-3 text-xs">
+          <div className="flex items-center gap-2 text-accent font-bold">
             <Users size={14} /> Caregiver Track Active
           </div>
           <p className="mt-1 text-[11px] text-white/70">Remote link active. Location: <strong>{trackingLocation}</strong></p>
@@ -394,28 +423,37 @@ function Shell({ children }: { children: ReactNode }) {
     </aside>
     
     <div className="civic-main">
-      <header className="mobile-nav items-center justify-between bg-[hsl(var(--sidebar))] px-4 py-4 text-[hsl(var(--sidebar-foreground))]" aria-label="Mobile header">
+      <header className="mobile-nav items-center justify-between bg-sidebar px-4 py-4 text-sidebar-foreground" aria-label="Mobile header">
         <BrandMark />
-        <button type="button" onClick={() => setMenuOpen((v) => !v)} aria-label="Toggle navigation" data-testid="button-toggle-navigation" className="rounded-lg p-2 hover:bg-[hsl(var(--sidebar-accent))]">{menuOpen ? <X size={21} /> : <Menu size={21} />}</button>
+        <button type="button" onClick={() => setMenuOpen((v) => !v)} aria-label="Toggle navigation" data-testid="button-toggle-navigation" className="rounded-lg p-2 hover:bg-sidebar-accent">{menuOpen ? <X size={21} /> : <Menu size={21} />}</button>
       </header>
-      {menuOpen && <nav className="mobile-nav flex-col gap-1 bg-[hsl(var(--sidebar))] px-4 pb-4 text-[hsl(var(--sidebar-foreground))]" aria-label="Mobile navigation">
-        {navItems.map(({ href, label, icon: Icon }) => <Link onClick={() => setMenuOpen(false)} key={href} href={href} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[hsl(var(--sidebar-accent))]"><Icon size={18} />{label}</Link>)}
+      {menuOpen && <nav className="mobile-nav flex-col gap-1 bg-sidebar px-4 pb-4 text-sidebar-foreground" aria-label="Mobile navigation">
+        {navItems.map(({ href, label, icon: Icon }) => <Link onClick={() => setMenuOpen(false)} key={href} href={href} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-semibold hover:bg-sidebar-accent"><Icon size={18} />{label}</Link>)}
       </nav>}
       
       {/* Voice Hands-Free Bar */}
       {voiceActive && (
-        <div className="bg-[hsl(var(--secondary))] border-b border-[hsl(var(--border))] p-3 px-5 flex items-center justify-between gap-4">
+        <div className="bg-secondary border-b border-border p-3 px-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Mic size={18} className="text-red-500 pulse-voice" />
             <span className="text-xs font-semibold">{voiceTranscript}</span>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => handleVoiceCommand("read signage")} className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded px-2.5 py-1 text-[10px] font-bold">Read sign</button>
-            <button onClick={() => handleVoiceCommand("go to audits")} className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded px-2.5 py-1 text-[10px] font-bold">Go to Audits</button>
-            <button onClick={() => handleVoiceCommand("help")} className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded px-2.5 py-1 text-[10px] font-bold">Helplines</button>
+            <button onClick={() => setIsCameraOcrOpen(true)} className="bg-card border border-border rounded px-2.5 py-1 text-[10px] font-bold flex items-center gap-1">
+              <Camera size={12} /> <span>Camera Scan</span>
+            </button>
+            <button onClick={() => handleVoiceCommand("go to audits")} className="bg-card border border-border rounded px-2.5 py-1 text-[10px] font-bold">Go to Audits</button>
+            <button onClick={() => handleVoiceCommand("help")} className="bg-card border border-border rounded px-2.5 py-1 text-[10px] font-bold">Helplines</button>
           </div>
         </div>
       )}
+
+      {/* Camera OCR Reader Modal */}
+      <CameraOcrModal
+        isOpen={isCameraOcrOpen}
+        onClose={() => setIsCameraOcrOpen(false)}
+        onTextExtracted={(text) => setSimulatedSign(text)}
+      />
 
       {/* Simulated Sign Reader Result Popup */}
       {simulatedSign && (
@@ -437,48 +475,63 @@ function Shell({ children }: { children: ReactNode }) {
       <main id="main-content" tabIndex={-1} className="outline-none flex-1 pb-16">{children}</main>
       
       {/* Enhanced Accessibility & Assistive Action Toolbars */}
-      <div className="accessibility-toolbar flex-wrap gap-2 md:max-w-4xl" aria-label="Accessibility and Safety tools">
-        {/* Font controls */}
-        <div className="flex border-r border-[hsl(var(--border))] pr-2 mr-1 items-center gap-1">
-          <button type="button" onClick={() => setZoomLevel(z => Math.max(10, z - 10))} title="Zoom out"><span className="text-[10px]">A-</span></button>
-          <span className="text-[9px] font-mono px-1">{zoomLevel}%</span>
-          <button type="button" onClick={() => setZoomLevel(z => z + 10)} title="Zoom in"><span className="text-sm">A+</span></button>
-          <button type="button" onClick={() => setZoomLevel(100)} title="Reset zoom" className="ml-1 text-[9px] underline">Reset</button>
-        </div>
+      <div className="fixed bottom-4 right-4 z-50 flex items-end gap-3">
+        {showToolbar && (
+          <div className="accessibility-toolbar relative right-0 bottom-0 mb-0 !static flex-wrap gap-2 md:max-w-4xl shadow-2xl animate-rise" aria-label="Accessibility and Safety tools">
+            {/* Font controls */}
+            <div className="flex border-r border-border pr-2 mr-1 items-center gap-1">
+              <button type="button" onClick={() => setZoomLevel(z => Math.max(10, z - 10))} title="Zoom out"><span className="text-[10px]">A-</span></button>
+              <span className="text-[9px] font-mono px-1">{zoomLevel}%</span>
+              <button type="button" onClick={() => setZoomLevel(z => z + 10)} title="Zoom in"><span className="text-sm">A+</span></button>
+              <button type="button" onClick={() => setZoomLevel(100)} title="Reset zoom" className="ml-1 text-[9px] underline">Reset</button>
+            </div>
 
-        {/* Colorblind Dropdown */}
-        <select 
-          aria-label="Colorblind filter theme selector" 
-          value={colorblindTheme} 
-          onChange={(e) => setColorblindTheme(e.target.value as any)}
-          className="text-[9px] font-mono font-bold bg-transparent border-0 outline-none uppercase p-1 mr-2"
+            {/* Colorblind Dropdown */}
+            <select 
+              aria-label="Colorblind filter theme selector" 
+              value={colorblindTheme} 
+              onChange={(e) => setColorblindTheme(e.target.value as any)}
+              className="text-[9px] font-mono font-bold bg-transparent border-0 outline-none uppercase p-1 mr-2"
+            >
+              <option value="none">Colorblind: Off</option>
+              <option value="deuteranopia">Red-Green Mode</option>
+              <option value="tritanopia">Blue-Yellow Mode</option>
+            </select>
+
+            {/* Standard controls */}
+            <button type="button" onClick={readPage} aria-pressed={reading} title={reading ? 'Stop reading' : 'Read aloud'}><Volume2 size={15} /><span>Read Aloud</span></button>
+            <button type="button" onClick={() => setHighContrast((v) => !v)} aria-pressed={highContrast} title="Toggle high contrast"><Contrast size={15} /><span>Contrast</span></button>
+            <button type="button" onClick={() => setInverted((v) => !v)} aria-pressed={inverted} title="Toggle color inversion"><Eye size={15} /><span>Invert</span></button>
+
+            {/* Emergency & Tracking buttons */}
+            <button type="button" onClick={triggerEmergency} className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold animate-pulse" title="Silent Emergency Alert">
+              <AlertOctagon size={15} /> <span>Emergency</span>
+            </button>
+
+            <button type="button" onClick={() => setTrackingActive(!trackingActive)} aria-pressed={trackingActive} className="bg-blue-600 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold" title="Toggle Remote Caregiver Tracking">
+              <Users size={15} /> <span>Track Pass</span>
+            </button>
+
+            <button type="button" onClick={toggleVoiceMode} aria-pressed={voiceActive} className="bg-teal-600 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold" title="Toggle hands-free voice control mode">
+              <Mic size={15} /> <span>Voice Mode</span>
+            </button>
+          </div>
+        )}
+
+        <button 
+          onClick={() => setShowToolbar(!showToolbar)} 
+          className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-black text-white shadow-2xl transition-transform hover:scale-105"
+          aria-label="Toggle Accessibility Menu"
         >
-          <option value="none">Colorblind: Off</option>
-          <option value="deuteranopia">Red-Green Mode</option>
-          <option value="tritanopia">Blue-Yellow Mode</option>
-        </select>
-
-        {/* Standard controls */}
-        <button type="button" onClick={readPage} aria-pressed={reading} title={reading ? 'Stop reading' : 'Read aloud'}><Volume2 size={15} /><span>Read Aloud</span></button>
-        <button type="button" onClick={() => setHighContrast((v) => !v)} aria-pressed={highContrast} title="Toggle high contrast"><Contrast size={15} /><span>Contrast</span></button>
-        <button type="button" onClick={() => setInverted((v) => !v)} aria-pressed={inverted} title="Toggle color inversion"><Eye size={15} /><span>Invert</span></button>
-
-        {/* Emergency & Tracking buttons */}
-        <button type="button" onClick={triggerEmergency} className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold animate-pulse" title="Silent Emergency Alert">
-          <AlertOctagon size={15} /> <span>Emergency</span>
-        </button>
-
-        <button type="button" onClick={() => setTrackingActive(!trackingActive)} aria-pressed={trackingActive} className="bg-blue-600 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold" title="Toggle Remote Caregiver Tracking">
-          <Users size={15} /> <span>Track Pass</span>
-        </button>
-
-        <button type="button" onClick={toggleVoiceMode} aria-pressed={voiceActive} className="bg-teal-600 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold" title="Toggle hands-free voice control mode">
-          <Mic size={15} /> <span>Voice Mode</span>
+          <div className="relative flex items-center justify-center w-full h-full">
+             <div className="absolute inset-2 border-2 border-dashed border-white/40 rounded-full animate-spin-slow"></div>
+             <User size={20} strokeWidth={2.5} />
+          </div>
         </button>
       </div>
       
       {/* Footer */}
-      <footer className="mt-12 border-t border-[hsl(var(--border))] py-6 px-4 md:px-8 text-center text-xs text-[hsl(var(--muted-foreground))]">
+      <footer className="mt-12 border-t border-border py-6 px-4 md:px-8 text-center text-xs text-muted-foreground">
         <p className="font-bold mb-1">Built by Team Code-Blooded</p>
         <p>Hetanshi Sidhpura · Aaryan Jaiswal · Dhruvi Jamnapara</p>
         <p className="mt-2 text-[10px] uppercase tracking-wider">Drs. Kiran &amp; Pallavi Patel Global University · Yi Vadodara Chapter</p>
@@ -488,8 +541,8 @@ function Shell({ children }: { children: ReactNode }) {
     {/* Registration Modal Overlay */}
     {showRegModal && (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-[hsl(var(--card))] border border-[hsl(var(--card-border))] rounded-2xl max-w-md w-full p-6 shadow-2xl">
-          <div className="flex justify-between items-center border-b border-[hsl(var(--border))] pb-3 mb-4">
+        <div className="bg-card border border-card-border rounded-2xl max-w-md w-full p-6 shadow-2xl">
+          <div className="flex justify-between items-center border-b border-border pb-3 mb-4">
             <h3 className="font-display text-xl font-bold">Easy Registration</h3>
             <button onClick={() => setShowRegModal(false)} className="hover:opacity-70"><X /></button>
           </div>
@@ -513,9 +566,10 @@ function Shell({ children }: { children: ReactNode }) {
                 <option value="regular_user">User without disabilities (Volunteer & Buddy)</option>
                 <option value="builder">Builder (Submit blueprints & track compliance)</option>
                 <option value="auditor">Auditor (Review blueprints & field audits)</option>
+                <option value="admin">System Admin (Full access to all modules)</option>
               </select>
             </div>
-            <button type="submit" className="w-full bg-[hsl(var(--primary))] text-white rounded-lg h-11 font-bold">Save Registration</button>
+            <button type="submit" className="w-full bg-primary text-white rounded-lg h-11 font-bold">Save Registration</button>
           </form>
         </div>
       </div>
@@ -524,17 +578,19 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 function PageHeader({ eyebrow, title, description, children }: { eyebrow: string; title: ReactNode; description: string; children?: ReactNode }) {
-  return <section className="paper-grid border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] px-5 py-9 md:px-10 md:py-12">
-    <div className="mx-auto flex max-w-[1240px] flex-col gap-6 md:flex-row md:items-end md:justify-between">
-      <div className="animate-rise">
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[hsl(var(--primary)/.2)] bg-[hsl(var(--primary)/.08)] px-3 py-1 font-data text-[10px] font-bold uppercase tracking-[.2em] text-[hsl(var(--primary))]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--accent))]" />
+  return <section className="detail-hero px-5 py-9 md:px-10 md:py-12 relative overflow-hidden">
+    <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-[#4D7C0F]/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 bg-[#CA8A04]/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="mx-auto flex max-w-[1240px] flex-col gap-6 md:flex-row md:items-end md:justify-between relative z-10">
+      <div>
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[rgba(77,124,15,0.2)] bg-[rgba(77,124,15,0.08)] px-3 py-1.5 font-data text-[10px] font-bold uppercase tracking-[.2em] text-[#4D7C0F] shadow-sm backdrop-blur-md">
+          <span className="h-2 w-2 rounded-full bg-[#CA8A04]" />
           {eyebrow}
         </div>
-        <h1 className="font-serif text-4xl font-bold leading-[1.08] tracking-tight text-[hsl(var(--foreground))] text-balance md:text-5xl lg:text-6xl">{title}</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-6 text-[hsl(var(--muted-foreground))] md:text-base font-sans">{description}</p>
+        <h1 className="font-serif text-4xl font-bold leading-[1.08] tracking-tight text-[#292524] text-balance md:text-5xl lg:text-6xl">{title}</h1>
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-[#292524]/70 md:text-base font-sans">{description}</p>
       </div>
-      {children && <div className="animate-rise stagger-2">{children}</div>}
+      {children && <div>{children}</div>}
     </div>
   </section>;
 }
@@ -548,16 +604,16 @@ function StatusBadge({ status }: { status: Building['status'] }) {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function Metric({ label, value, note, accent }: { label: string; value: string; note: string; accent?: string }) {
-  return <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-6 shadow-sm transition-all hover:shadow-md">
-    <div className={`absolute left-0 top-0 h-1.5 w-full ${accent ?? 'bg-[hsl(var(--primary))]'}`} />
-    <div className="font-data text-[10px] font-bold uppercase tracking-[.16em] text-[hsl(var(--muted-foreground))]">{label}</div>
-    <div data-testid={`metric-${label.toLowerCase().replaceAll(' ', '-')}`} className="metric-number font-serif mt-3 text-4xl font-extrabold text-[hsl(var(--foreground))]">{value}</div>
-    <div className="mt-2 text-xs text-[hsl(var(--muted-foreground))] font-sans">{note}</div>
+  return <div className="glass-card relative overflow-hidden p-6">
+    <div className={`absolute left-0 top-0 h-1.5 w-full ${accent ?? 'bg-[#4D7C0F]'}`} />
+    <div className="font-data text-[10px] font-bold uppercase tracking-[.16em] text-[#292524]/60">{label}</div>
+    <div data-testid={`metric-${label.toLowerCase().replaceAll(' ', '-')}`} className="metric-number font-serif mt-3 text-5xl font-extrabold text-[#292524]">{value}</div>
+    <div className="mt-2 text-xs text-[#292524]/50 font-sans font-medium">{note}</div>
   </div>;
 }
 
 function LoadingState({ label = 'Loading public records' }: { label?: string }) {
-  return <div className="space-y-4" data-testid="state-loading"><div className="skeleton h-20 rounded-xl" /><div className="skeleton h-20 rounded-xl" /><div className="flex items-center gap-2 pt-1 text-xs text-[hsl(var(--muted-foreground))]"><Loader2 size={14} className="animate-spin" />{label}</div></div>;
+  return <div className="space-y-4" data-testid="state-loading"><div className="skeleton h-20 rounded-xl" /><div className="skeleton h-20 rounded-xl" /><div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground"><Loader2 size={14} className="animate-spin" />{label}</div></div>;
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
@@ -565,11 +621,11 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 function EmptyState({ query }: { query?: string }) {
-  return <div className="rounded-xl border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--card)/.55)] p-12 text-center" data-testid="state-empty"><Search className="mx-auto text-[hsl(var(--muted-foreground))]" size={28} /><h3 className="mt-4 font-display text-xl font-bold">No buildings found</h3><p className="mx-auto mt-2 max-w-sm text-sm text-[hsl(var(--muted-foreground))]">{query ? `Nothing matched “${query}”. Try a neighbourhood or a different status.` : 'The directory is ready for its first verified record.'}</p></div>;
+  return <div className="rounded-xl border border-dashed border-border bg-card/55 p-12 text-center" data-testid="state-empty"><Search className="mx-auto text-muted-foreground" size={28} /><h3 className="mt-4 font-display text-xl font-bold">No buildings found</h3><p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{query ? `Nothing matched “${query}”. Try a neighbourhood or a different status.` : 'The directory is ready for its first verified record.'}</p></div>;
 }
 
 function StarRating({ rating }: { rating: number }) {
-  return <div className="flex items-center gap-1" aria-label={`${rating} out of 5 stars`} data-testid="rating-stars">{[0, 1, 2, 3, 4].map((index) => <Star key={index} size={15} aria-hidden="true" fill={index < Math.round(rating) ? 'currentColor' : 'none'} className={index < Math.round(rating) ? 'text-[hsl(var(--accent))]' : 'text-[hsl(var(--border))]'} />)}<span className="ml-1 font-data text-xs" aria-hidden="true">{rating.toFixed(1)}</span></div>;
+  return <div className="flex items-center gap-1" aria-label={`${rating} out of 5 stars`} data-testid="rating-stars">{[0, 1, 2, 3, 4].map((index) => <Star key={index} size={15} aria-hidden="true" fill={index < Math.round(rating) ? 'currentColor' : 'none'} className={index < Math.round(rating) ? 'text-accent' : 'text-border'} />)}<span className="ml-1 font-data text-xs" aria-hidden="true">{rating.toFixed(1)}</span></div>;
 }
 
 // Map ratings logic: Calculate building compliance score based on complaints
@@ -604,8 +660,8 @@ function Dashboard() {
   if (isError) return <ErrorState onRetry={refetch} />;
 
   return <div>
-    <PageHeader eyebrow="Public Accessibility Directory" title={<>Access for everyone,<br /><span className="text-[hsl(var(--primary))]">everywhere.</span></>} description="Explore and verify the accessibility of public buildings across India. Plan your visits with confidence and help us improve public access by sharing your experience.">
-      <Link href="/audit" data-testid="link-start-audit" className="inline-flex items-center gap-2 rounded-lg bg-[hsl(var(--primary))] px-5 py-3 text-sm font-bold text-[hsl(var(--primary-foreground))] shadow-civic transition-transform hover:-translate-y-0.5">Check a building plan <ChevronRight size={16} /></Link>
+    <PageHeader eyebrow="Public Accessibility Directory" title={<>Access for everyone,<br /><span className="text-primary">everywhere.</span></>} description="Explore and verify the accessibility of public buildings across India. Plan your visits with confidence and help us improve public access by sharing your experience.">
+      <Link href="/audit" data-testid="link-start-audit" className="inline-flex items-center gap-2 rounded-2xl bg-[#4D7C0F] px-6 py-3.5 text-sm font-bold text-[#FAFAF9] shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl hover:bg-[#3f650c]">Check a building plan <ChevronRight size={16} /></Link>
     </PageHeader>
     <div className="mx-auto max-w-[1240px] px-5 py-7 md:px-10 md:py-9">
       {summaryData && (
@@ -613,7 +669,7 @@ function Dashboard() {
           <Metric label="Buildings mapped" value={String(summaryData.buildings)} note="Across public jurisdictions" />
           <Metric label="Verified recently" value={String(summaryData.verified)} note="Audited and compliant" accent="bg-[#32805e]" />
           <Metric label="Open accessibility issues" value={String(summaryData.openGaps)} note="Reported by community" accent="bg-[#c28b1b]" />
-          <Metric label="Average rating" value={summaryData.averageRating.toFixed(1)} note="Updated live from audits" accent="bg-[hsl(var(--accent))]" />
+          <Metric label="Average rating" value={summaryData.averageRating.toFixed(1)} note="Updated live from audits" accent="bg-accent" />
         </div>
       )}
 
@@ -621,29 +677,29 @@ function Dashboard() {
         <section className="min-w-0 animate-rise">
           <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <div className="font-data text-[10px] uppercase tracking-[.18em] text-[hsl(var(--primary))]">Open directory</div>
+              <div className="font-data text-[10px] uppercase tracking-[.18em] text-primary">Open directory</div>
               <h2 className="mt-1 font-display text-3xl font-bold">Public buildings</h2>
             </div>
-            <div className="text-xs text-[hsl(var(--muted-foreground))]" aria-live="polite">
+            <div className="text-xs text-muted-foreground" aria-live="polite">
               {filteredBuildings.length} records in view
             </div>
           </div>
           
-          <div className="overflow-hidden rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] shadow-civic">
+          <div className="glass-card overflow-hidden">
             {/* Filters including Hospitals highlight */}
-            <div className="flex flex-col gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.32)] p-3 sm:flex-row">
+            <div className="flex flex-col gap-3 border-b border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.5)] p-3 sm:flex-row">
               <div className="relative flex-1">
-                <Search size={16} aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
-                <input data-testid="input-building-search" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search buildings by name, neighbourhood or builder" placeholder="Search building, neighbourhood or builder" className="h-10 w-full rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--card))] pl-9 pr-3 text-sm outline-none transition-shadow placeholder:text-[hsl(var(--muted-foreground))] focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]" />
+                <Search size={16} aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#292524]/50" />
+                <input data-testid="input-building-search" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search buildings by name, neighbourhood or builder" placeholder="Search building, neighbourhood or builder" className="h-10 w-full rounded-xl border border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.8)] pl-9 pr-3 text-sm outline-none transition-shadow placeholder:text-[#292524]/40 focus:ring-2 focus:ring-[#4D7C0F]/30" />
               </div>
               <div className="flex gap-2">
-                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as any)} aria-label="Filter by building category" className="h-10 rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--card))] px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]">
+                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as any)} aria-label="Filter by building category" className="h-10 rounded-xl border border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.8)] px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#4D7C0F]/30">
                   <option value="all">All Categories</option>
                   <option value="hospital">Hospitals (Important)</option>
                   <option value="government">Government Offices</option>
                   <option value="library">Libraries</option>
                 </select>
-                <select data-testid="select-building-status" value={status} onChange={(event) => setStatus(event.target.value as typeof status)} aria-label="Filter buildings by compliance status" className="h-10 rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--card))] px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]">
+                <select data-testid="select-building-status" value={status} onChange={(event) => setStatus(event.target.value as typeof status)} aria-label="Filter buildings by compliance status" className="h-10 rounded-xl border border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.8)] px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#4D7C0F]/30">
                   <option value="all">All statuses</option>
                   <option value="green">Compliant</option>
                   <option value="amber">Needs attention</option>
@@ -652,7 +708,7 @@ function Dashboard() {
               </div>
             </div>
             
-            <div className="hidden grid-cols-[1.45fr_1fr_auto_auto] gap-4 border-b border-[hsl(var(--border))] px-4 py-3 font-data text-[9px] uppercase tracking-[.13em] text-[hsl(var(--muted-foreground))] md:grid">
+            <div className="hidden grid-cols-[1.45fr_1fr_auto_auto] gap-4 border-b border-[rgba(41,37,36,0.1)] px-4 py-3 font-data text-[9px] uppercase tracking-[.13em] text-[#292524]/60 font-bold bg-[rgba(250,250,249,0.3)] md:grid">
               <span>Building</span>
               <span>Builder</span>
               <span>Accessibility Rating</span>
@@ -667,19 +723,19 @@ function Dashboard() {
               else dynStatus = 'red';
 
               return (
-                <Link key={building.id} href={`/buildings/${building.id}`} className="group grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[hsl(var(--border))] px-4 py-4 transition-colors hover:bg-[hsl(var(--secondary)/.5)] md:grid-cols-[1.45fr_1fr_auto_auto]">
+                <Link key={building.id} href={`/buildings/${building.id}`} className="group grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[rgba(41,37,36,0.05)] px-4 py-4 transition-all hover:bg-[rgba(250,250,249,0.9)] md:grid-cols-[1.45fr_1fr_auto_auto]">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="truncate text-sm font-bold group-hover:text-[hsl(var(--primary))]">{building.name}</h3>
+                      <h3 className="truncate text-sm font-bold group-hover:text-primary">{building.name}</h3>
                       {building.category === 'hospital' && <span className="bg-red-100 text-red-700 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1"><Heart size={10} /> Hospital</span>}
                     </div>
-                    <p className="mt-1 flex items-center gap-1 truncate text-xs text-[hsl(var(--muted-foreground))]"><MapPin size={12} />{building.address}</p>
+                    <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground"><MapPin size={12} />{building.address}</p>
                   </div>
-                  <div className="hidden text-xs text-[hsl(var(--muted-foreground))] md:block">{building.builder}</div>
+                  <div className="hidden text-xs text-muted-foreground md:block">{building.builder}</div>
                   <StarRating rating={dynRating} />
                   <div className="col-span-2 flex items-center justify-between md:col-span-1">
                     <StatusBadge status={dynStatus} />
-                    <ChevronRight size={17} className="text-[hsl(var(--muted-foreground))] transition-transform group-hover:translate-x-1" />
+                    <ChevronRight size={17} className="text-muted-foreground transition-transform group-hover:translate-x-1" />
                   </div>
                 </Link>
               );
@@ -691,27 +747,27 @@ function Dashboard() {
         <aside className="animate-rise">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <div className="font-data text-[10px] uppercase tracking-[.18em] text-[hsl(var(--primary))]">Offline Audit</div>
+              <div className="font-data text-[10px] uppercase tracking-[.18em] text-primary">Offline Audit</div>
               <h2 className="mt-1 font-display text-2xl font-bold">Awareness Checklist</h2>
             </div>
-            <CheckSquare size={17} className="text-[hsl(var(--muted-foreground))]" />
+            <CheckSquare size={17} className="text-muted-foreground" />
           </div>
-          <div className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 shadow-civic mb-6">
-            <h3 className="text-xs font-bold mb-3">Basic Access Audit Checklist:</h3>
-            <ul className="space-y-2 text-xs">
-              <li className="flex items-start gap-2"><input type="checkbox" className="mt-0.5" /> <span>Ramp slope at/under 1:12 (8.33%)</span></li>
-              <li className="flex items-start gap-2"><input type="checkbox" className="mt-0.5" /> <span>Main doors wide enough (900mm+)</span></li>
-              <li className="flex items-start gap-2"><input type="checkbox" className="mt-0.5" /> <span>Lift buttons with Braille & voice guide</span></li>
-              <li className="flex items-start gap-2"><input type="checkbox" className="mt-0.5" /> <span>Grab rails in toilets & step-free</span></li>
+          <div className="glass-card p-5 mb-6">
+            <h3 className="text-sm font-bold mb-3 text-[#292524]">Basic Access Audit Checklist:</h3>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#4D7C0F] rounded-sm" /> <span className="font-medium text-[#292524]">Ramp slope at/under 1:12 (8.33%)</span></li>
+              <li className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#4D7C0F] rounded-sm" /> <span className="font-medium text-[#292524]">Main doors wide enough (900mm+)</span></li>
+              <li className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#4D7C0F] rounded-sm" /> <span className="font-medium text-[#292524]">Lift buttons with Braille & voice guide</span></li>
+              <li className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#4D7C0F] rounded-sm" /> <span className="font-medium text-[#292524]">Grab rails in toilets & step-free</span></li>
             </ul>
-            <p className="text-[10px] text-muted-foreground mt-3 italic">Use these guidelines to evaluate public buildings offline.</p>
+            <p className="text-[10px] text-[#292524]/50 mt-3 italic font-semibold">Use these guidelines to evaluate public buildings offline.</p>
           </div>
           
-          <div className="rounded-xl bg-[hsl(var(--primary))] p-5 text-[hsl(var(--primary-foreground))] shadow-civic">
-            <Compass size={23} className="mb-8 text-[hsl(var(--accent))]" />
-            <h3 className="font-display text-xl font-bold">Safe Spot Shortcuts</h3>
-            <p className="mt-2 text-xs leading-5 text-[hsl(var(--primary-foreground)/.7)]">Instantly look up pre-saved safe evacuation refuges inside buildings.</p>
-            <Link href="/safe-spots" className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-[hsl(var(--accent))]">View Safe Spots <ChevronRight size={14} /></Link>
+          <div className="glass-card bg-[#292524]/90 backdrop-blur-2xl p-6 text-[#FAFAF9]">
+            <Compass size={28} className="mb-8 text-[#CA8A04]" />
+            <h3 className="font-display text-2xl font-bold">Safe Spot Shortcuts</h3>
+            <p className="mt-2 text-sm leading-5 text-[#FAFAF9]/80 font-medium">Instantly look up pre-saved safe evacuation refuges inside buildings.</p>
+            <Link href="/safe-spots" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#CA8A04] hover:text-[#dcb558] transition-colors">View Safe Spots <ChevronRight size={14} /></Link>
           </div>
         </aside>
       </div>
@@ -721,19 +777,20 @@ function Dashboard() {
 
 function DetailPage() {
   const { id = '' } = useParams<{ id: string }>();
-  const { buildings, complaints } = useAppAPI();
-  const building = buildings.find(b => b.id === id);
+  const { complaints } = useAppAPI();
+  const { data: buildingDetail, isLoading, isError, refetch } = useGetBuilding(id);
 
-  if (!building) return <div className="mx-auto max-w-[760px] px-5 py-12 md:px-10"><ErrorState onRetry={() => {}} /></div>;
+  if (isLoading) return <div className="mx-auto max-w-[760px] px-5 py-12 md:px-10"><LoadingState label="Loading building details" /></div>;
+  if (isError || !buildingDetail) return <div className="mx-auto max-w-[760px] px-5 py-12 md:px-10"><ErrorState onRetry={refetch} /></div>;
   
-  const dynRating = calculateRating(building, complaints);
-  let dynStatus = building.status;
+  const dynRating = calculateRating(buildingDetail as any, complaints);
+  let dynStatus = buildingDetail.status;
   if (dynRating >= 4.5) dynStatus = 'green';
   else if (dynRating >= 3.5) dynStatus = 'amber';
   else dynStatus = 'red';
 
   const updatedBuilding = {
-    ...building,
+    ...buildingDetail,
     rating: dynRating,
     status: dynStatus
   };
@@ -747,6 +804,7 @@ function BuildingDetailPage({ building }: { building: any }) {
   const { safeSpots, addSafeSpot, complaints } = useAppAPI();
   const buildingComplaints = complaints.filter(c => c.buildingId === building.id);
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
+  const [showAuditHistoryModal, setShowAuditHistoryModal] = useState(false);
 
   const handleSaveSafeSpot = () => {
     addSafeSpot({
@@ -758,19 +816,111 @@ function BuildingDetailPage({ building }: { building: any }) {
     alert("Saved to your Safe Spots shortcuts!");
   };
 
-  return <div>
+  // Score rotation for the ring (score is 0-100, map to 0-360deg)
+  const scoreRotation = Math.min(building.report.score, 100) * 3.6;
+
+  return <div className="detail-page-content">
+    {/* ── Audit History & Inspector Dossier Modal ── */}
+    {showAuditHistoryModal && (
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div className="bg-card border border-teal-500/40 rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-rise max-h-[85vh] overflow-y-auto space-y-6">
+          <div className="flex justify-between items-center border-b border-border pb-4">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
+                Official Compliance Audit History
+              </span>
+              <h3 className="font-display text-2xl font-bold mt-2">{building.name}</h3>
+            </div>
+            <button onClick={() => setShowAuditHistoryModal(false)} className="hover:opacity-70 p-1.5 rounded-lg transition-colors hover:bg-secondary"><X size={20} /></button>
+          </div>
+
+          {/* Current Verified Certificate Badge */}
+          <div className="rounded-xl border border-green-300 bg-green-50/70 p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-green-600 text-white flex items-center justify-center font-bold">
+                <CheckCircle2 size={24} />
+              </div>
+              <div>
+                <div className="font-bold text-sm text-green-900">RPwD Act &amp; NBC 2016 Certified</div>
+                <div className="text-xs text-green-700">Auditor: {building.audit?.auditorName || building.auditor || "National Access Audit Association"}</div>
+              </div>
+            </div>
+            <span className="font-mono text-xs font-bold bg-white text-green-800 px-3 py-1.5 rounded-lg border border-green-200">
+              CERT-RPWD-2026-8891
+            </span>
+          </div>
+
+          {/* Detailed Physical Measurements & Verification Parameters */}
+          <div className="rounded-xl border border-border bg-secondary/30 p-5 space-y-3">
+            <h4 className="font-display text-sm font-bold text-primary uppercase tracking-wider">Auditor On-Site Field Measurements</h4>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-muted-foreground block text-[10px] uppercase font-bold">Entry Ramp Slope</span>
+                <span className="font-bold text-foreground text-sm">8.0% (1:12 Standard)</span>
+              </div>
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-muted-foreground block text-[10px] uppercase font-bold">Clear Door Opening</span>
+                <span className="font-bold text-foreground text-sm">950 mm Width</span>
+              </div>
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-muted-foreground block text-[10px] uppercase font-bold">Tactile Tile Paving</span>
+                <span className="font-bold text-green-700 text-sm">Excellent Alignment</span>
+              </div>
+              <div className="p-3 bg-background rounded-lg border">
+                <span className="text-muted-foreground block text-[10px] uppercase font-bold">Washroom Turning Circle</span>
+                <span className="font-bold text-foreground text-sm">1500 mm Radius</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Attached Proof Documents & Evidence Photos */}
+          <div className="rounded-xl border border-border bg-secondary/30 p-5 space-y-3">
+            <h4 className="font-display text-sm font-bold text-primary uppercase tracking-wider flex items-center gap-2">
+              <FileUp size={16} /> Auditor Attached Proof Files &amp; Photos
+            </h4>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="bg-white border border-border text-foreground text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm">
+                <FileCheck2 size={14} className="text-teal-600" /> onsite_ramp_slope_photo.jpg
+              </span>
+              <span className="bg-white border border-border text-foreground text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm">
+                <FileCheck2 size={14} className="text-teal-600" /> dwg_layout_verification.pdf
+              </span>
+              <span className="bg-white border border-border text-foreground text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm">
+                <FileCheck2 size={14} className="text-teal-600" /> washroom_grabrail_height.png
+              </span>
+            </div>
+          </div>
+
+          {/* Audit History Timeline */}
+          <div className="space-y-3">
+            <h4 className="font-display text-sm font-bold text-primary uppercase tracking-wider">Audit Inspection History</h4>
+            <div className="space-y-3">
+              <div className="p-4 rounded-xl border border-border bg-card space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-foreground">{building.audit?.auditorName || "AccessWorks India"}</span>
+                  <span className="text-[10px] text-muted-foreground">{building.lastAudit || building.audit?.submittedAt || "10 Aug 2026"}</span>
+                </div>
+                <p className="text-muted-foreground leading-relaxed">{building.audit?.summary || "On-site inspection confirmed all accessibility parameters. Ramp slope, elevator keys, and washroom clearances measured."}</p>
+                <div className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded inline-block">Status: Verified &amp; Certified</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    {/* ── Complaint Resolution Timeline Modal ── */}
     {selectedComplaint && (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-[hsl(var(--card))] border border-[hsl(var(--card-border))] rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-          <div className="flex justify-between items-center border-b border-[hsl(var(--border))] pb-3 mb-5">
+        <div className="bg-card border border-card-border rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-rise">
+          <div className="flex justify-between items-center border-b border-border pb-3 mb-5">
             <h3 className="font-display text-xl font-bold">Complaint Resolution Timeline</h3>
-            <button onClick={() => setSelectedComplaint(null)} className="hover:opacity-70"><X /></button>
+            <button onClick={() => setSelectedComplaint(null)} className="hover:opacity-70 p-1 rounded-lg transition-colors hover:bg-secondary"><X /></button>
           </div>
           
           <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
             {/* Step 1: Filed */}
             <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-[hsl(var(--primary))] text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-primary text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
                 <Check size={16} />
               </div>
               <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -792,22 +942,22 @@ function BuildingDetailPage({ building }: { building: any }) {
                   <div className="font-bold text-sm">Assigned to Officer</div>
                   <time className="font-data text-[9px] text-slate-500">Shortly after</time>
                 </div>
-                <div className="text-xs text-slate-500">Assigned to {selectedComplaint.officer} for review and action.</div>
+                <div className="text-xs text-slate-500">Assigned to field team for {selectedComplaint.buildingName}.</div>
               </div>
             </div>
 
-            {/* Step 3: Resolution */}
-            {(selectedComplaint.status === 'Resolved' || selectedComplaint.status === 'Dismissed') && (
+            {/* Step 3: Status */}
+            {(selectedComplaint.status === "In Progress" || selectedComplaint.status === "Resolved" || selectedComplaint.status === "Dismissed") && (
               <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full border border-white text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 ${selectedComplaint.status === 'Resolved' ? 'bg-green-500' : 'bg-red-500'}`}>
-                  {selectedComplaint.status === 'Resolved' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <div className={`flex items-center justify-center w-10 h-10 rounded-full border border-white text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 ${selectedComplaint.status === 'Resolved' ? 'bg-[#32805e]' : selectedComplaint.status === 'Dismissed' ? 'bg-[#b74740]' : 'bg-[#c28b1b]'}`}>
+                  {selectedComplaint.status === 'Resolved' ? <CheckCircle2 size={16} /> : selectedComplaint.status === 'Dismissed' ? <AlertCircle size={16} /> : <Loader2 size={16} />}
                 </div>
                 <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between space-x-2 mb-1">
                     <div className="font-bold text-sm">{selectedComplaint.status}</div>
-                    <time className="font-data text-[9px] text-slate-500">Actioned</time>
+                    <time className="font-data text-[9px] text-slate-500">Current</time>
                   </div>
-                  <div className="text-xs text-slate-500">{selectedComplaint.dismissReason || 'Issue resolved by authorities.'}</div>
+                  <div className="text-xs text-slate-500">{selectedComplaint.dismissReason || "Action taken by officer on site."}</div>
                 </div>
               </div>
             )}
@@ -815,49 +965,252 @@ function BuildingDetailPage({ building }: { building: any }) {
         </div>
       </div>
     )}
-    <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.45)] px-5 py-4 md:px-10"><div className="mx-auto flex max-w-[1240px] items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]"><Link href="/" data-testid="link-back-directory" className="hover:text-[hsl(var(--primary))]">Directory</Link><ChevronRight size={13} /><span className="truncate">{building.name}</span></div></div>
-    <div className="mx-auto max-w-[1240px] px-5 py-8 md:px-10 md:py-11">
-      <div className="flex flex-col gap-6 border-b border-[hsl(var(--border))] pb-8 md:flex-row md:items-end md:justify-between"><div><div className="font-data text-[10px] uppercase tracking-[.2em] text-[hsl(var(--primary))]">Building record / {building.id}</div><h1 data-testid="text-building-name" className="mt-3 font-display text-4xl font-bold leading-tight md:text-5xl">{building.name}</h1><p className="mt-3 flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]"><MapPin size={15} />{building.address}</p></div><div className="flex flex-wrap items-center gap-4"><StatusBadge status={building.status} /><StarRating rating={building.rating} /></div></div>
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1.3fr_.7fr]">
+
+    {/* ── Breadcrumb ── */}
+    <div className="bg-background border-b border-border px-5 py-3 md:px-10 text-[11px] text-muted-foreground flex items-center gap-2">
+      <Link href="/" className="hover:text-primary transition-colors">Directory</Link>
+      <ChevronRight size={11} className="opacity-40" />
+      <span className="text-foreground font-semibold truncate">{building.name}</span>
+    </div>
+
+    {/* ── Hero Section ── */}
+    <section className="detail-hero px-5 py-8 md:px-10 md:py-12">
+      <div className="mx-auto max-w-[1240px]">
+        <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+          {/* Left: Building identity */}
+          <div className="animate-rise flex-1 min-w-0">
+            <div className="font-data text-[10px] uppercase tracking-[.2em] text-primary">Building record / {building.id}</div>
+            <h1 data-testid="text-building-name" className="mt-3 font-display text-3xl font-bold leading-tight md:text-4xl lg:text-5xl text-balance">{building.name}</h1>
+            <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><MapPin size={15} className="flex-none" />{building.address}</p>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <StatusBadge status={building.status} />
+              <StarRating rating={building.rating} />
+              <button
+                onClick={() => setShowAuditHistoryModal(true)}
+                className="bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow transition"
+              >
+                <ClipboardCheck size={14} />
+                <span>View Audit History &amp; Inspector Dossier</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Score ring — visual anchor */}
+          <div className="animate-rise stagger-2 flex flex-col items-center gap-3 flex-none">
+            <div 
+              className="score-ring" 
+              data-status={building.status}
+              style={{ '--score-rotation': `${scoreRotation}deg` } as React.CSSProperties}
+              aria-label={`Compliance score: ${building.report.score} out of 100`}
+            >
+              <span className="font-display text-4xl font-bold">{building.report.score}</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">score</span>
+            </div>
+            <div className="text-center">
+              <div className="font-bold text-sm">{building.report.rating.toFixed(1)} / 5.0</div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">{building.report.gaps.length ? 'Needs improvement' : 'Fully compliant'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* ── Main Content Grid ── */}
+    <div className="mx-auto max-w-[1240px] px-5 py-8 md:px-10 md:py-10">
+      <div className="grid gap-6 lg:grid-cols-[1.3fr_.7fr]">
+        
+        {/* ── Left Column ── */}
         <div className="space-y-6">
-          <section className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 shadow-civic md:p-6">
-            <div className="flex items-center justify-between">
+
+          {/* Card 1: Accessibility Features */}
+          <section className="glass-card p-5 md:p-7">
+            <div className="flex items-center justify-between mb-5">
               <div>
-                <div className="font-data text-[10px] uppercase tracking-[.16em] text-[hsl(var(--primary))]">At a glance</div>
-                <h2 className="mt-1 font-display text-2xl font-bold">Accessibility features</h2>
+                <div className="font-data text-[10px] uppercase tracking-[.16em] text-[#4D7C0F]">At a glance</div>
+                <h2 className="mt-1 font-display text-xl font-bold md:text-2xl text-[#292524]">Accessibility features</h2>
               </div>
-              <Footprints className="text-[hsl(var(--primary))]" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(77,124,15,0.1)] text-[#4D7C0F]">
+                <Footprints size={24} />
+              </div>
             </div>
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">{building.accessibleFeatures.map((feature: any, index: number) => <div key={`${feature}-${index}`} data-testid={`feature-${index}`} className="flex items-center gap-3 rounded-lg bg-[hsl(var(--secondary)/.5)] px-3 py-3 text-sm"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#dcefe5] text-[#26734e]"><Check size={14} strokeWidth={3} /></span>{feature}</div>)}</div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {building.accessibleFeatures.map((feature: any, index: number) => (
+                <div key={`${feature}-${index}`} data-testid={`feature-${index}`} className="flex items-center gap-3 rounded-xl border border-[rgba(41,37,36,0.05)] bg-[rgba(250,250,249,0.5)] px-4 py-3.5 text-sm transition-transform hover:-translate-y-1 shadow-sm">
+                  <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[rgba(202,138,4,0.15)] text-[#CA8A04]">
+                    <Check size={16} strokeWidth={3} />
+                  </span>
+                  <span className="font-bold text-[#292524]">{feature}</span>
+                </div>
+              ))}
+            </div>
           </section>
-          
+
+          {/* Card 2: Compliance Report */}
           <ComplianceReportCard report={building.report} />
-          
-          {/* Quick Evacuation Save Spot Shortcut button */}
-          <section className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 shadow-civic md:p-6 flex justify-between items-center">
-            <div>
-              <h3 className="font-bold text-sm">Save Safe Evacuation Spot</h3>
-              <p className="text-xs text-muted-foreground">Save {selected?.label || 'current spot'} as a shortcut for quick retrieval in emergencies.</p>
+
+          {/* Card 3: Community Complaints for this building */}
+          {buildingComplaints.length > 0 && (
+            <section className="glass-card p-5 md:p-7">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <div className="font-data text-[10px] uppercase tracking-[.16em] text-[#CA8A04]">Community feedback</div>
+                  <h2 className="mt-1 font-display text-xl font-bold md:text-2xl text-[#292524]">Filed complaints</h2>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(202,138,4,0.1)] text-[#CA8A04]">
+                  <AlertOctagon size={24} />
+                </div>
+              </div>
+              <div className="space-y-4">
+                {buildingComplaints.map((c: any) => {
+                  const steps = ["Submitted", "Assigned", "In Progress", c.status === "Dismissed" ? "Dismissed" : "Resolved"];
+                  const currentStepIdx = c.status === "Submitted" ? 0 : c.status === "Assigned" ? 1 : c.status === "In Progress" ? 2 : 3;
+                  return (
+                    <button key={c.id} onClick={() => setSelectedComplaint(c)} className="w-full text-left rounded-lg border border-border/60 bg-secondary/30 p-4 transition-all hover:bg-secondary/60 hover:shadow-sm group">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-bold text-sm truncate">{c.category}</div>
+                          <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{c.details}</div>
+                        </div>
+                        <span className={`flex-none rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider ${c.status === 'Resolved' ? 'bg-[#dcefe5] text-[#26734e]' : c.status === 'Dismissed' ? 'bg-[#f7dfdb] text-[#a53f3a]' : 'bg-[#f9ebc7] text-[#906515]'}`}>
+                          {c.status}
+                        </span>
+                      </div>
+                      {/* Mini progress bar */}
+                      <div className="mt-3 flex gap-1">
+                        {steps.map((step, i) => (
+                          <div key={step} className={`h-1 flex-1 rounded-full transition-colors ${i <= currentStepIdx ? (c.status === 'Dismissed' ? 'bg-[#b74740]' : 'bg-primary') : 'bg-border'}`} />
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Card 4: Save Safe Evacuation Spot (desktop only — also in sticky bar on mobile) */}
+          <section className="glass-card p-5 md:p-7 hidden md:flex justify-between items-center gap-4 bg-[rgba(202,138,4,0.15)] border-[rgba(202,138,4,0.3)]">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <ShieldCheck size={20} className="text-[#CA8A04] flex-none" />
+                <h3 className="font-bold text-base text-[#292524]">Save Safe Evacuation Spot</h3>
+              </div>
+              <p className="text-sm text-[#292524]/70 leading-5 font-medium">Save {selected?.label || 'current spot'} as a shortcut for quick retrieval in emergencies.</p>
             </div>
-            <button onClick={handleSaveSafeSpot} className="bg-[hsl(var(--primary))] text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1">
-              <Plus size={14} /> Add Shortcut
+            <button onClick={handleSaveSafeSpot} className="bg-[#CA8A04] text-[#FAFAF9] text-sm font-bold px-6 py-3 rounded-2xl shadow-md flex items-center gap-1.5 flex-none transition-transform hover:-translate-y-1 active:translate-y-1 active:shadow-sm">
+              <Plus size={16} /> Add Shortcut
             </button>
           </section>
         </div>
         
-        <div className="space-y-6"><WayfindingPanel building={building} selectedWayfinding={selectedWayfinding} setSelectedWayfinding={setSelectedWayfinding} selected={selected} /><section className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--primary))] p-5 text-[hsl(var(--primary-foreground))] shadow-civic md:p-6"><div className="flex items-center gap-2 text-[hsl(var(--accent))]"><Landmark size={18} /><span className="font-data text-[10px] uppercase tracking-[.16em]">Record ownership</span></div><div className="mt-5 grid grid-cols-2 gap-5"><div><div className="text-[10px] text-[hsl(var(--primary-foreground)/.6)]">Builder</div><div className="mt-1 text-sm font-bold">{building.builder}</div></div><div><div className="text-[10px] text-[hsl(var(--primary-foreground)/.6)]">Last audited</div><div className="mt-1 text-sm font-bold">{new Date(building.lastAudit).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div></div><div><div className="text-[10px] text-[hsl(var(--primary-foreground)/.6)]">Auditor</div><div className="mt-1 text-sm font-bold">{building.auditor}</div></div><div><div className="text-[10px] text-[hsl(var(--primary-foreground)/.6)]">Coordinates</div><div className="mt-1 font-data text-xs font-bold">{building.coordinates.lat.toFixed(3)}, {building.coordinates.lng.toFixed(3)}</div></div></div></section></div>
+        {/* ── Right Column ── */}
+        <div className="space-y-6">
+          {/* Card 5: Wayfinding Panel */}
+          <WayfindingPanel building={building} selectedWayfinding={selectedWayfinding} setSelectedWayfinding={setSelectedWayfinding} selected={selected} />
+
+          {/* Card 6: Record Ownership */}
+          <section className="glass-card p-5 md:p-7 bg-[#292524]/90 text-[#FAFAF9] backdrop-blur-2xl">
+            <div className="flex items-center gap-2 text-[#CA8A04] mb-5">
+              <Landmark size={20} />
+              <span className="font-data text-[10px] uppercase tracking-[.16em]">Record ownership</span>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <div className="text-[10px] text-[#FAFAF9]/60 uppercase tracking-wider font-bold">Builder</div>
+                <div className="mt-1 text-base font-bold">{building.builder}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-[#FAFAF9]/60 uppercase tracking-wider font-bold">Last audited</div>
+                <div className="mt-1 text-base font-bold">{new Date(building.lastAudit).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-[#FAFAF9]/60 uppercase tracking-wider font-bold">Auditor</div>
+                <div className="mt-1 text-base font-bold">{building.auditor}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-[#FAFAF9]/60 uppercase tracking-wider font-bold">Coordinates</div>
+                <div className="mt-1 font-data text-sm font-bold">{building.coordinates.lat.toFixed(3)}, {building.coordinates.lng.toFixed(3)}</div>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
+    </div>
+
+    {/* ── Sticky Mobile Action Bar ── */}
+    <div className="sticky-actions" aria-label="Quick actions">
+      <button onClick={handleSaveSafeSpot} className="flex-1 bg-[rgba(202,138,4,0.15)] text-[#CA8A04] border border-[rgba(202,138,4,0.3)] rounded-2xl py-3 text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-95">
+        <ShieldCheck size={18} /> Save Safe Spot
+      </button>
+      <Link href="/complaints" className="flex-1 bg-[#292524] text-[#FAFAF9] rounded-2xl py-3 text-sm font-bold flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-md">
+        <AlertOctagon size={18} /> Report Issue
+      </Link>
     </div>
   </div>;
 }
 
-// Wayfinding and Assistive Views
+// ── Wayfinding and Assistive Views ──
 function WayfindingPanel({ building, selectedWayfinding, setSelectedWayfinding, selected }: { building: any; selectedWayfinding?: string; setSelectedWayfinding: (id: string) => void; selected?: any }) {
   const [mode, setMode] = useState<'map' | 'video'>('map');
-  return <section className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 shadow-civic md:p-6"><div className="flex items-center justify-between"><div><div className="font-data text-[10px] uppercase tracking-[.16em] text-[hsl(var(--primary))]">Inside the building</div><h2 className="mt-1 font-display text-2xl font-bold">Wayfinding</h2></div><Compass className="text-[hsl(var(--primary))]" /></div><div className="mt-4 flex rounded-lg bg-[hsl(var(--secondary)/.6)] p-1" role="tablist" aria-label="Wayfinding views"><button type="button" id="map-tab" role="tab" aria-selected={mode === 'map'} aria-controls="floor-plan-panel" onClick={() => setMode('map')} className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-bold ${mode === 'map' ? 'bg-[hsl(var(--card))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'}`}><Navigation size={14} />Floor plan</button><button type="button" id="video-tab" role="tab" aria-selected={mode === 'video'} aria-controls="assistive-view-panel" onClick={() => setMode('video')} className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-bold ${mode === 'video' ? 'bg-[hsl(var(--card))] shadow-sm' : 'text-[hsl(var(--muted-foreground))]'}`}><Camera size={14} />Assistive view</button></div>{mode === 'map' ? <div id="floor-plan-panel" role="tabpanel" aria-labelledby="map-tab"><div role="tablist" aria-label="Floor plan wayfinding checkpoints" className="relative mt-5 aspect-[1.1] overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[#eef1e5] paper-grid"><div className="absolute left-[12%] top-[12%] h-[23%] w-[31%] border-2 border-[hsl(var(--primary)/.5)] bg-[#fbfaf1]/75" /><div className="absolute right-[10%] top-[16%] h-[40%] w-[25%] border-2 border-[hsl(var(--primary)/.5)] bg-[#fbfaf1]/75" /><div className="absolute bottom-[11%] left-[13%] h-[27%] w-[56%] border-2 border-[hsl(var(--primary)/.5)] bg-[#fbfaf1]/75" /><div className="absolute bottom-[16%] right-[8%] h-10 w-10 rounded-full border-2 border-dashed border-[hsl(var(--primary)/.6)]" />{building.wayfinding.map((item: any) => {
-  const isSelected = selectedWayfinding === item.id;
-  return <button type="button" key={item.id} role="tab" aria-selected={isSelected} aria-controls={`wayfinding-detail-${item.id}`} aria-label={`${item.label} (${item.status})`} onClick={() => setSelectedWayfinding(item.id)} data-testid={`button-wayfinding-${item.id}`} style={{ left: `${item.x}%`, top: `${item.y}%` }} className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#fff9ec] p-1.5 shadow transition-transform hover:scale-110 ${isSelected ? 'z-10 scale-125 bg-[hsl(var(--primary))] text-white' : item.status === 'open' ? 'bg-[#32805e] text-white' : item.status === 'limited' ? 'bg-[#c28b1b] text-white' : 'bg-[#b74740] text-white'}`}><MapPin size={13} fill="currentColor" /></button>;
-})}</div>{selected && <div id={`wayfinding-detail-${selected.id}`} role="tabpanel" aria-label={`${selected.label} Details`} className="mt-4 rounded-lg bg-[hsl(var(--secondary)/.55)] p-4"><div className="flex items-center justify-between"><div className="font-bold text-sm">{selected.label}</div><span className={`status-${selected.status} rounded-full px-2 py-1 text-[9px] font-bold uppercase`}>{selected.status}</span></div><div className="mt-1 font-data text-[9px] uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{selected.type}</div><p className="mt-3 text-xs leading-5 text-[hsl(var(--muted-foreground))]">{selected.note}</p></div>}</div> : <div id="assistive-view-panel" role="tabpanel" aria-labelledby="video-tab"><AssistiveView building={building} /></div>}</section>;
+  return (
+    <section className="glass-card p-5 md:p-7">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="font-data text-[10px] uppercase tracking-[.16em] text-[#4D7C0F]">Inside the building</div>
+          <h2 className="mt-1 font-display text-xl font-bold md:text-2xl text-[#292524]">Wayfinding</h2>
+        </div>
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(77,124,15,0.1)] text-[#4D7C0F]">
+          <Compass size={24} />
+        </div>
+      </div>
+
+      {/* Pill-style tab switcher - Glassmorphic */}
+      <div className="flex rounded-xl bg-[rgba(41,37,36,0.05)] p-1 backdrop-blur-md" role="tablist" aria-label="Wayfinding views">
+        <button type="button" id="map-tab" role="tab" aria-selected={mode === 'map'} aria-controls="floor-plan-panel" onClick={() => setMode('map')} 
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold transition-all ${mode === 'map' ? 'bg-[#FAFAF9] text-[#292524] shadow-sm' : 'text-[#292524]/60 hover:text-[#292524]'}`}>
+          <Navigation size={14} />Floor plan
+        </button>
+        <button type="button" id="video-tab" role="tab" aria-selected={mode === 'video'} aria-controls="assistive-view-panel" onClick={() => setMode('video')} 
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-bold transition-all ${mode === 'video' ? 'bg-[#FAFAF9] text-[#292524] shadow-sm' : 'text-[#292524]/60 hover:text-[#292524]'}`}>
+          <Camera size={14} />Assistive view
+        </button>
+      </div>
+
+      {mode === 'map' ? (
+        <div id="floor-plan-panel" role="tabpanel" aria-labelledby="map-tab">
+          <div role="tablist" aria-label="Floor plan wayfinding checkpoints" className="relative mt-5 aspect-[1.1] overflow-hidden rounded-xl border border-border bg-[#eef1e5] paper-grid">
+            <div className="absolute left-[12%] top-[12%] h-[23%] w-[31%] border-2 border-primary/50 bg-[#fbfaf1]/75 rounded-sm" />
+            <div className="absolute right-[10%] top-[16%] h-[40%] w-[25%] border-2 border-primary/50 bg-[#fbfaf1]/75 rounded-sm" />
+            <div className="absolute bottom-[11%] left-[13%] h-[27%] w-[56%] border-2 border-primary/50 bg-[#fbfaf1]/75 rounded-sm" />
+            <div className="absolute bottom-[16%] right-[8%] h-10 w-10 rounded-full border-2 border-dashed border-primary/60" />
+            {building.wayfinding.map((item: any) => {
+              const isSelected = selectedWayfinding === item.id;
+              return (
+                <button type="button" key={item.id} role="tab" aria-selected={isSelected} aria-controls={`wayfinding-detail-${item.id}`} aria-label={`${item.label} (${item.status})`} onClick={() => setSelectedWayfinding(item.id)} data-testid={`button-wayfinding-${item.id}`} style={{ left: `${item.x}%`, top: `${item.y}%` }} 
+                  className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#fff9ec] p-1.5 shadow-md transition-all hover:scale-110 ${isSelected ? 'z-10 scale-125 bg-primary text-white ring-4 ring-primary/20' : item.status === 'open' ? 'bg-[#32805e] text-white' : item.status === 'limited' ? 'bg-[#c28b1b] text-white' : 'bg-[#b74740] text-white'}`}>
+                  <MapPin size={13} fill="currentColor" />
+                </button>
+              );
+            })}
+          </div>
+          {selected && (
+            <div id={`wayfinding-detail-${selected.id}`} role="tabpanel" aria-label={`${selected.label} Details`} className="mt-4 rounded-xl bg-secondary/55 p-4 animate-rise">
+              <div className="flex items-center justify-between">
+                <div className="font-bold text-sm">{selected.label}</div>
+                <span className={`status-${selected.status} rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider`}>{selected.status}</span>
+              </div>
+              <div className="mt-1 font-data text-[9px] uppercase tracking-wider text-muted-foreground">{selected.type}</div>
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">{selected.note}</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div id="assistive-view-panel" role="tabpanel" aria-labelledby="video-tab">
+          <AssistiveView building={building} />
+        </div>
+      )}
+    </section>
+  );
 }
 
 function AssistiveView({ building }: { building: any }) {
@@ -894,21 +1247,98 @@ function AssistiveView({ building }: { building: any }) {
     }
   };
   useEffect(() => () => streamRef.current?.getTracks().forEach((track) => track.stop()), []);
-  return <div className="mt-5"><div className="relative aspect-[1.1] overflow-hidden rounded-lg bg-[#142a2b]"><video ref={videoRef} autoPlay playsInline muted className={`h-full w-full object-cover ${active ? 'opacity-100' : 'opacity-0'}`} /><div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#224546] via-[#183536] to-[#0e2223]"><div className="text-center text-white/75"><Camera size={32} className="mx-auto mb-3 text-[hsl(var(--accent))]" /><p className="font-data text-[9px] uppercase tracking-[.18em]">{active ? 'Live camera feed' : 'Simulated assistive AR view'}</p><p className="mt-2 text-xs text-white/55">Guidance is based on the published wayfinding record.</p></div></div>{active && <div className="absolute inset-x-4 top-4 rounded-lg border border-[hsl(var(--accent)/.65)] bg-black/45 px-3 py-2 text-xs font-bold text-white">Ramp ahead · 5 m · left</div>}<div className="absolute inset-x-4 bottom-4 flex items-center justify-between"><span className="rounded-full bg-black/45 px-3 py-2 text-[10px] font-bold text-white"><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#72d19a]" />{active ? 'Guidance live' : 'Preview mode'}</span><button type="button" onClick={toggleCamera} data-testid="button-toggle-camera" className="flex items-center gap-2 rounded-lg bg-[hsl(var(--accent))] px-3 py-2 text-xs font-bold text-[hsl(var(--foreground))]">{active ? <CameraOff size={14} /> : <Camera size={14} />}{active ? 'Stop camera' : 'Start camera'}</button></div></div><div className="mt-4 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--secondary)/.55)] p-4"><div className="flex items-start gap-3"><Volume2 size={17} className="mt-0.5 flex-none text-[hsl(var(--primary))]" /><div><div className="text-xs font-bold">Live announcement</div><p className="mt-1 text-xs leading-5 text-[hsl(var(--muted-foreground))]">{message}</p></div></div><button type="button" onClick={() => speak(`Proceed to the ${building.wayfinding[0]?.label ?? 'accessible entrance'}. ${building.wayfinding[0]?.note ?? ''}`)} data-testid="button-announce-route" className="mt-4 flex items-center gap-2 text-xs font-bold text-[hsl(var(--primary))]">Announce next checkpoint <Volume2 size={14} /></button></div></div>;
+
+  return (
+    <div className="mt-5">
+      <div className="relative aspect-[1.1] overflow-hidden rounded-xl bg-[#142a2b]">
+        <video ref={videoRef} autoPlay playsInline muted className={`h-full w-full object-cover ${active ? 'opacity-100' : 'opacity-0'}`} />
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#224546] via-[#183536] to-[#0e2223]">
+          <div className="text-center text-white/75">
+            <Camera size={32} className="mx-auto mb-3 text-accent" />
+            <p className="font-data text-[9px] uppercase tracking-[.18em]">{active ? 'Live camera feed' : 'Simulated assistive AR view'}</p>
+            <p className="mt-2 text-xs text-white/55">Guidance is based on the published wayfinding record.</p>
+          </div>
+        </div>
+        {active && <div className="absolute inset-x-4 top-4 rounded-lg border border-accent/65 bg-black/45 px-3 py-2 text-xs font-bold text-white">Ramp ahead · 5 m · left</div>}
+        <div className="absolute inset-x-4 bottom-4 flex items-center justify-between">
+          <span className="rounded-full bg-black/45 px-3 py-2 text-[10px] font-bold text-white">
+            <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#72d19a]" />{active ? 'Guidance live' : 'Preview mode'}
+          </span>
+          <button type="button" onClick={toggleCamera} data-testid="button-toggle-camera" className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-xs font-bold text-foreground transition-transform hover:-translate-y-0.5">
+            {active ? <CameraOff size={14} /> : <Camera size={14} />}{active ? 'Stop camera' : 'Start camera'}
+          </button>
+        </div>
+      </div>
+      <div className="mt-4 rounded-xl border border-border bg-secondary/55 p-4">
+        <div className="flex items-start gap-3">
+          <Volume2 size={17} className="mt-0.5 flex-none text-primary" />
+          <div>
+            <div className="text-xs font-bold">Live announcement</div>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">{message}</p>
+          </div>
+        </div>
+        <button type="button" onClick={() => speak(`Proceed to the ${building.wayfinding[0]?.label ?? 'accessible entrance'}. ${building.wayfinding[0]?.note ?? ''}`)} data-testid="button-announce-route" className="mt-4 flex items-center gap-2 text-xs font-bold text-primary transition-colors hover:text-accent">
+          Announce next checkpoint <Volume2 size={14} />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function ComplianceReportCard({ report }: { report: ComplianceReport }) {
-  return <section className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 shadow-civic md:p-6"><div className="flex flex-col gap-5 sm:flex-row sm:items-start"><div className="flex h-24 w-24 flex-none flex-col items-center justify-center rounded-full border-[10px] border-[#32805e]/20 border-t-[#32805e]"><span data-testid="text-compliance-score" className="font-data text-2xl font-bold">{report.score}</span><span className="text-[9px] uppercase text-[hsl(var(--muted-foreground))]">score</span></div><div><div className="font-data text-[10px] uppercase tracking-[.16em] text-[hsl(var(--primary))]">Compliance report</div><h2 className="mt-1 font-display text-2xl font-bold">{report.rating.toFixed(1)} / 5.0 · {report.gaps.length ? 'A few things to fix' : 'Ready for everyone'}</h2><p className="mt-2 text-sm leading-6 text-[hsl(var(--muted-foreground))]">{report.summary}</p><p className="mt-2 font-data text-[9px] uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Checked {new Date(report.checkedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p></div></div>{report.gaps.length > 0 && <div className="mt-6 border-t border-[hsl(var(--border))] pt-4"><div className="mb-2 text-xs font-bold">Open recommendations</div>{report.gaps.map((gap) => <GapRow gap={gap} key={gap.id} />)}</div>}</section>;
+  return (
+    <section className="glass-card p-5 md:p-7">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <div className="font-data text-[10px] uppercase tracking-[.16em] text-[#292524]/60">Compliance report</div>
+          <h2 className="mt-1 font-display text-xl font-bold md:text-2xl text-[#292524]">
+            {report.rating.toFixed(1)} / 5.0 · {report.gaps.length ? 'A few things to fix' : 'Ready for everyone'}
+          </h2>
+        </div>
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(41,37,36,0.05)] text-[#292524]">
+          <FileCheck2 size={24} />
+        </div>
+      </div>
+
+      <p className="text-sm leading-6 text-muted-foreground">{report.summary}</p>
+      <p className="mt-2 font-data text-[9px] uppercase tracking-wider text-muted-foreground">
+        Checked {new Date(report.checkedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+      </p>
+
+      {report.gaps.length > 0 && (
+        <div className="mt-6 border-t border-border pt-5">
+          <div className="mb-3 font-data text-[10px] uppercase tracking-[.14em] text-muted-foreground font-bold">Open recommendations</div>
+          <div className="space-y-0.5">
+            {report.gaps.map((gap) => <GapRow gap={gap} key={gap.id} />)}
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 function GapRow({ gap }: { gap: Gap }) {
-  return <div className="flex gap-3 border-t border-[hsl(var(--border))] py-3"><span className={`mt-1 h-2 w-2 flex-none rounded-full ${gap.severity === 'critical' ? 'bg-[#b74740]' : gap.severity === 'moderate' ? 'bg-[#c28b1b]' : 'bg-[hsl(var(--primary))]'}`} /><div><div className="text-xs font-bold">{gap.title}</div><div className="mt-1 text-xs leading-5 text-[hsl(var(--muted-foreground))]">{gap.recommendation}</div><div className="mt-1 font-data text-[9px] uppercase text-[hsl(var(--muted-foreground))]">{gap.reference} • {gap.severity}</div></div></div>;
+  return (
+    <div className="flex gap-3 border-t border-[rgba(41,37,36,0.1)] py-4 group">
+      <span className={`mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-xl shadow-sm ${gap.severity === 'critical' ? 'bg-[rgba(183,71,64,0.15)] text-[#b74740]' : gap.severity === 'moderate' ? 'bg-[rgba(202,138,4,0.15)] text-[#CA8A04]' : 'bg-[rgba(77,124,15,0.15)] text-[#4D7C0F]'}`}>
+        {gap.severity === 'critical' ? <AlertCircle size={16} /> : gap.severity === 'moderate' ? <CircleAlert size={16} /> : <Info size={16} />}
+      </span>
+      <div className="min-w-0">
+        <div className="text-sm font-bold text-[#292524]">{gap.title}</div>
+        <div className="mt-1 text-xs leading-5 text-[#292524]/70 font-medium">{gap.recommendation}</div>
+        <div className="mt-1.5 font-data text-[9px] uppercase tracking-wider text-[#292524]/50">{gap.reference} · <span className={`font-bold ${gap.severity === 'critical' ? 'text-[#b74740]' : gap.severity === 'moderate' ? 'text-[#CA8A04]' : 'text-[#4D7C0F]'}`}>{gap.severity}</span></div>
+      </div>
+    </div>
+  );
 }
 
 function AuditPage() {
   const compliance = useRunComplianceCheck();
   const { profile } = useAppAPI();
   const [report, setReport] = useState<ComplianceReport | null>(null);
+  const [aiAnalysisState, setAiAnalysisState] = useState<'idle' | 'analyzing' | 'completed'>('idle');
+  const [aiError, setAiError] = useState('');
+  const [forwarded, setForwarded] = useState(false);
   const [form, setForm] = useState({ 
     builderName: '', 
     buildingName: '', 
@@ -927,25 +1357,54 @@ function AuditPage() {
   
   const update = (key: keyof typeof form, value: string | boolean) => setForm((current) => ({ ...current, [key]: value }));
   
-  const submit = (event: FormEvent) => { 
+  const runAiAnalysis = async (event: FormEvent) => { 
     event.preventDefault(); 
+    if (!form.blueprintName) {
+      setAiError('Please attach a blueprint to proceed with AI analysis.');
+      return;
+    }
+    setAiError('');
+    setAiAnalysisState('analyzing');
+    
+    // Simulate AI processing delay
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    
+    const isFailing = form.blueprintName.toLowerCase().includes('fail');
+    
+    const autoFilledForm = {
+      ...form,
+      rampSlope: isFailing ? '12' : '8.33',
+      doorWidth: isFailing ? '800' : '950',
+      liftAvailable: !isFailing,
+      accessibleRestrooms: !isFailing,
+      tactilePath: !isFailing,
+      accessibleParking: !isFailing,
+      signageContrast: !isFailing,
+      emergencyRefuge: !isFailing,
+      inductionLoop: !isFailing,
+      washroomAlarmCord: !isFailing
+    };
+    
+    setForm(autoFilledForm);
+
     const data: ComplianceInput = { 
-      builderName: form.builderName, 
-      buildingName: form.buildingName, 
-      rampSlope: Number(form.rampSlope), 
-      doorWidth: Number(form.doorWidth), 
-      liftAvailable: form.liftAvailable, 
-      accessibleRestrooms: form.accessibleRestrooms, 
-      tactilePath: form.tactilePath, 
-      ...(form.blueprintName ? { blueprintName: form.blueprintName } : {}) 
+      builderName: autoFilledForm.builderName, 
+      buildingName: autoFilledForm.buildingName, 
+      rampSlope: Number(autoFilledForm.rampSlope), 
+      doorWidth: Number(autoFilledForm.doorWidth), 
+      liftAvailable: autoFilledForm.liftAvailable, 
+      accessibleRestrooms: autoFilledForm.accessibleRestrooms, 
+      tactilePath: autoFilledForm.tactilePath, 
+      ...(autoFilledForm.blueprintName ? { blueprintName: autoFilledForm.blueprintName } : {}) 
     }; 
+
     compliance.mutate({ data }, { 
       onSuccess: (res) => {
         // Enrich report score with extra architectural checks
         let extraScoreDeduction = 0;
         const extraGaps: Gap[] = [];
         
-        if (!form.accessibleParking) {
+        if (!autoFilledForm.accessibleParking) {
           extraScoreDeduction += 8;
           extraGaps.push({
             id: 'gap-parking',
@@ -955,7 +1414,7 @@ function AuditPage() {
             recommendation: 'Reserve at least 2 parking slots near the entry with international symbol and 3.6m width.'
           });
         }
-        if (!form.emergencyRefuge) {
+        if (!autoFilledForm.emergencyRefuge) {
           extraScoreDeduction += 12;
           extraGaps.push({
             id: 'gap-refuge',
@@ -965,7 +1424,7 @@ function AuditPage() {
             recommendation: 'Provide a fire-rated refuge area on upper floors with 2-way intercom.'
           });
         }
-        if (!form.washroomAlarmCord) {
+        if (!autoFilledForm.washroomAlarmCord) {
           extraScoreDeduction += 6;
           extraGaps.push({
             id: 'gap-alarm',
@@ -984,65 +1443,132 @@ function AuditPage() {
           gaps: [...res.gaps, ...extraGaps]
         };
         setReport(finalReport);
-        addNotification("New Blueprint Submitted", `Builder ${form.builderName} submitted ${form.buildingName}. Nearby auditors notified for review.`, "info");
-      } 
+        setAiAnalysisState('completed');
+      },
+      onError: () => {
+        setAiAnalysisState('idle');
+        setAiError('The AI checker could not complete. Please try again.');
+      }
     }); 
   };
 
+  const forwardToAuditor = async () => {
+    try {
+      await fetch("/api/audits/forward", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          buildingName: form.buildingName,
+          builderName: form.builderName,
+          blueprintName: form.blueprintName || "Uploaded_Blueprint.dwg",
+          stage: "blueprint_approval",
+          aiScore: report?.score || 95,
+          aiReport: report,
+          provisions: {
+            liftAvailable: form.liftAvailable,
+            accessibleRestrooms: form.accessibleRestrooms,
+            tactilePath: form.tactilePath,
+            accessibleParking: form.accessibleParking,
+            signageContrast: form.signageContrast,
+            emergencyRefuge: form.emergencyRefuge,
+            inductionLoop: form.inductionLoop,
+            washroomAlarmCord: form.washroomAlarmCord,
+          },
+        }),
+      });
+    } catch (err) {
+      console.warn("Could not forward audit job to backend:", err);
+    }
+    setForwarded(true);
+    addNotification("New Blueprint Submitted", `Builder ${form.builderName} submitted ${form.buildingName}. Nearby auditors notified for review.`, "success");
+  };
+
+  const resetAudit = () => {
+    setReport(null);
+    setAiAnalysisState('idle');
+    setForwarded(false);
+    setForm(current => ({ ...current, blueprintName: '' }));
+  };
+
+  if (forwarded) return <div className="mx-auto max-w-[720px] px-5 py-16 md:px-10"><div className="animate-rise rounded-2xl border border-[#b9d6c3] bg-[#edf7ef] p-8 text-center shadow-civic"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32805e] text-white"><Check size={27} /></div><div className="mt-5 font-data text-[10px] uppercase tracking-[.18em] text-[#26734e]">Audit Received</div><h1 className="mt-2 font-display text-4xl font-bold text-[#173b2c]">Blueprint Forwarded to Auditor.</h1><p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[#426b55]">Your AI-verified blueprint will now be checked by a human auditor before final approval.</p><button type="button" onClick={resetAudit} className="mt-7 rounded-lg bg-[#26734e] px-5 py-3 text-sm font-bold text-white">Check another blueprint</button></div></div>;
+
   return <div>
-    <PageHeader eyebrow="Architect's Compliance Workspace" title={<>Check the layout<br /><span className="text-[hsl(var(--primary))]">before building.</span></>} description="Quickly test your blueprint dimensions and structural facilities against official NBC 2016 and RPwD Act standards before submission." />
+    <PageHeader eyebrow="Architect's Compliance Workspace" title={<>Check the layout<br /><span className="text-primary">before building.</span></>} description="Quickly test your blueprint dimensions and structural facilities against official NBC 2016 and RPwD Act standards before submission." />
     <div className="mx-auto grid max-w-[1240px] gap-8 px-5 py-8 md:px-10 lg:grid-cols-[1fr_380px]">
-      <form onSubmit={submit} className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 shadow-civic md:p-7">
-        <div className="mb-7 flex items-center gap-3 border-b border-[hsl(var(--border))] pb-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--secondary))] text-[hsl(var(--primary))]">
+      <form onSubmit={runAiAnalysis} className="rounded-xl border border-card-border bg-card p-5 shadow-civic md:p-7">
+        <div className="mb-7 flex items-center gap-3 border-b border-border pb-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary">
             <FileCheck2 size={18} />
           </div>
           <div>
-            <h2 className="font-display text-2xl font-bold">Structural &amp; Facility Inputs</h2>
-            <p className="text-xs text-[hsl(var(--muted-foreground))]">All parameters are checked against NBC 2016 &amp; Harmonised Guidelines.</p>
+            <h2 className="font-display text-2xl font-bold">AI Blueprint Analysis</h2>
+            <p className="text-xs text-muted-foreground">Automatically check layout parameters against NBC 2016 &amp; Harmonised Guidelines.</p>
           </div>
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Builder / Organisation" value={form.builderName} onChange={(v) => update('builderName', v)} placeholder="e.g. CPWD regional office" testId="input-builder-name" required />
           <Field label="Building Name" value={form.buildingName} onChange={(v) => update('buildingName', v)} placeholder="e.g. Ward office, Sector 12" testId="input-building-name" required />
-          <Field label="Entry Ramp Slope" suffix="%" type="number" value={form.rampSlope} onChange={(v) => update('rampSlope', v)} testId="input-ramp-slope" required />
-          <Field label="Clear Door Opening Width" suffix="mm" type="number" value={form.doorWidth} onChange={(v) => update('doorWidth', v)} testId="input-door-width" required />
         </div>
 
         <div className="mt-6">
-          <label htmlFor="blueprint" className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[hsl(var(--primary)/.45)] bg-[hsl(var(--secondary)/.32)] p-5 text-center transition-colors hover:bg-[hsl(var(--secondary))]">
-            <FileUp size={22} className="text-[hsl(var(--primary))]" />
+          <label htmlFor="blueprint" className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-primary/45 bg-secondary/32 p-5 text-center transition-colors hover:bg-secondary">
+            <FileUp size={22} className="text-primary" />
             <span className="mt-2 text-xs font-bold">{form.blueprintName || 'Attach Blueprint Reference (DWG, PDF, Plan)'}</span>
-            <span className="mt-1 text-[10px] text-[hsl(var(--muted-foreground))]">PDF, DWG or image • optional for rule verification</span>
-            <input id="blueprint" type="file" className="sr-only" data-testid="input-blueprint" onChange={(event) => update('blueprintName', event.target.files?.[0]?.name ?? '')} />
+            <span className="mt-1 text-[10px] text-muted-foreground">Required for AI verification</span>
+            <input id="blueprint" type="file" className="sr-only" data-testid="input-blueprint" onChange={(event) => {
+               update('blueprintName', event.target.files?.[0]?.name ?? '');
+               if (aiAnalysisState === 'completed') setAiAnalysisState('idle'); // reset if new file uploaded
+            }} />
           </label>
         </div>
 
-        <div className="mt-7 space-y-3.5 border-t border-[hsl(var(--border))] pt-6">
-          <h3 className="font-display text-sm font-bold text-[hsl(var(--primary))] mb-3 uppercase tracking-wider">Access Provisions Checklist</h3>
-          <Toggle label="Lift available and operational with Braille & Voice" checked={form.liftAvailable} onChange={(v) => update('liftAvailable', v)} testId="toggle-lift" />
-          <Toggle label="Accessible restroom on every public floor" checked={form.accessibleRestrooms} onChange={(v) => update('accessibleRestrooms', v)} testId="toggle-restrooms" />
-          <Toggle label="Continuous tactile guidance path from entry" checked={form.tactilePath} onChange={(v) => update('tactilePath', v)} testId="toggle-tactile" />
-          <Toggle label="Dedicated 3.6m Accessible Parking Slot near entrance" checked={form.accessibleParking} onChange={(v) => update('accessibleParking', v)} testId="toggle-parking" />
-          <Toggle label="High-Contrast signage with tactile Braille (1.4m - 1.6m)" checked={form.signageContrast} onChange={(v) => update('signageContrast', v)} testId="toggle-signage" />
-          <Toggle label="Fire Evacuation Safe Refuge Zone with 2-way intercom" checked={form.emergencyRefuge} onChange={(v) => update('emergencyRefuge', v)} testId="toggle-refuge" />
-          <Toggle label="Hearing Induction Loop at help desk / reception" checked={form.inductionLoop} onChange={(v) => update('inductionLoop', v)} testId="toggle-induction" />
-          <Toggle label="Washroom emergency pull-cord alarm (at 300mm & 900mm)" checked={form.washroomAlarmCord} onChange={(v) => update('washroomAlarmCord', v)} testId="toggle-alarm" />
-        </div>
+        {aiAnalysisState === 'completed' && (
+          <>
+            <div className="grid gap-5 sm:grid-cols-2 mt-6">
+              <Field label="Entry Ramp Slope (AI Checked)" suffix="%" type="number" value={form.rampSlope} onChange={(v) => update('rampSlope', v)} testId="input-ramp-slope" />
+              <Field label="Clear Door Opening Width (AI Checked)" suffix="mm" type="number" value={form.doorWidth} onChange={(v) => update('doorWidth', v)} testId="input-door-width" />
+            </div>
+            <div className="mt-7 space-y-3.5 border-t border-border pt-6">
+              <h3 className="font-display text-sm font-bold text-primary mb-3 uppercase tracking-wider">AI Access Provisions Checklist</h3>
+              <Toggle label="Lift available and operational with Braille & Voice" checked={form.liftAvailable} onChange={(v) => update('liftAvailable', v)} testId="toggle-lift" />
+              <Toggle label="Accessible restroom on every public floor" checked={form.accessibleRestrooms} onChange={(v) => update('accessibleRestrooms', v)} testId="toggle-restrooms" />
+              <Toggle label="Continuous tactile guidance path from entry" checked={form.tactilePath} onChange={(v) => update('tactilePath', v)} testId="toggle-tactile" />
+              <Toggle label="Dedicated 3.6m Accessible Parking Slot near entrance" checked={form.accessibleParking} onChange={(v) => update('accessibleParking', v)} testId="toggle-parking" />
+              <Toggle label="High-Contrast signage with tactile Braille (1.4m - 1.6m)" checked={form.signageContrast} onChange={(v) => update('signageContrast', v)} testId="toggle-signage" />
+              <Toggle label="Fire Evacuation Safe Refuge Zone with 2-way intercom" checked={form.emergencyRefuge} onChange={(v) => update('emergencyRefuge', v)} testId="toggle-refuge" />
+              <Toggle label="Hearing Induction Loop at help desk / reception" checked={form.inductionLoop} onChange={(v) => update('inductionLoop', v)} testId="toggle-induction" />
+              <Toggle label="Washroom emergency pull-cord alarm (at 300mm & 900mm)" checked={form.washroomAlarmCord} onChange={(v) => update('washroomAlarmCord', v)} testId="toggle-alarm" />
+            </div>
+          </>
+        )}
 
-        <button disabled={compliance.isPending} type="submit" data-testid="button-run-compliance" className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-[hsl(var(--primary))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--primary-foreground))] transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70">
-          {compliance.isPending ? <><Loader2 size={16} className="animate-spin" />Checking blueprint dimensions…</> : <><ShieldCheck size={16} />Run Structural Compliance Audit</>}
-        </button>
-        {compliance.isError && <p data-testid="text-compliance-error" className="mt-3 text-center text-xs text-[#a53f3a]">The checker could not complete. Please review your inputs and try again.</p>}
+        {aiAnalysisState !== 'completed' ? (
+          <button disabled={aiAnalysisState === 'analyzing'} type="submit" data-testid="button-run-compliance" className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70">
+            {aiAnalysisState === 'analyzing' ? <><Loader2 size={16} className="animate-spin" />Analyzing blueprint via AI…</> : <><ShieldCheck size={16} />Analyze Blueprint with AI</>}
+          </button>
+        ) : (
+          <div className="mt-8 space-y-4">
+            {report && report.score < 95 ? (
+              <div className="rounded-lg bg-[#a53f3a]/10 p-4 text-[#a53f3a] border border-[#a53f3a]/20 text-sm">
+                <strong>Cannot Forward:</strong> Blueprint compliance is below 95% (Current Score: {report.score}%). Please fix the identified gaps and re-analyze.
+              </div>
+            ) : (
+              <button type="button" onClick={forwardToAuditor} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#32805e] px-5 py-3.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 shadow-md">
+                Forward to Auditor
+              </button>
+            )}
+          </div>
+        )}
+        {aiError && <p data-testid="text-compliance-error" className="mt-3 text-center text-xs text-[#a53f3a]">{aiError}</p>}
       </form>
 
       <div className="lg:pt-1">
         {report ? <div className="animate-rise">
-          <div className="mb-3 font-data text-[10px] uppercase tracking-[.18em] text-[hsl(var(--primary))]">Audit Report / Result</div>
+          <div className="mb-3 font-data text-[10px] uppercase tracking-[.18em] text-primary">Audit Report / Result</div>
           <ComplianceReportCard report={report} />
-          <button type="button" onClick={() => setReport(null)} data-testid="button-new-compliance" className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-4 py-3 text-xs font-bold hover:bg-[hsl(var(--secondary))]">
-            <ClipboardCheck size={15} />Check Another Building Blueprint
+          <button type="button" onClick={resetAudit} data-testid="button-new-compliance" className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-bold hover:bg-secondary">
+            <ClipboardCheck size={15} />Reset and Check Another
           </button>
         </div> : <InfoPanel title="What this checks" icon={<ShieldCheck size={20} />} items={[
           'Ramp slope at or below 1:12 (8.33%)',
@@ -1062,8 +1588,8 @@ function Field({ label, value, onChange, placeholder, suffix, type = 'text', req
   return <div className="block text-xs font-bold">
     <label htmlFor={inputId} className="block mb-2">{label}{required && <span className="ml-1 text-[#b74740]">*</span>}</label>
     <div className="relative">
-      <input id={inputId} required={required} type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} data-testid={testId} className="h-11 w-full rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm font-medium outline-none placeholder:text-[hsl(var(--muted-foreground)/.65)] focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]" />
-      {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 font-data text-[10px] text-[hsl(var(--muted-foreground))]">{suffix}</span>}
+      <input id={inputId} required={required} type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} data-testid={testId} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium outline-none placeholder:text-muted-foreground/65 focus:ring-2 focus:ring-ring/30" />
+      {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 font-data text-[10px] text-muted-foreground">{suffix}</span>}
     </div>
   </div>;
 }
@@ -1073,21 +1599,32 @@ function Toggle({ label, checked, onChange, testId }: { label: string; checked: 
   const labelId = testId + '-label';
   return <div className="flex items-center justify-between gap-4 text-sm font-semibold">
     <span id={labelId}>{label}</span>
-    <button id={switchId} type="button" role="switch" aria-checked={checked} aria-labelledby={labelId} onClick={() => onChange(!checked)} data-testid={testId} className={`relative h-6 w-11 flex-none rounded-full transition-colors ${checked ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted-foreground)/.35)]'}`}>
+    <button id={switchId} type="button" role="switch" aria-checked={checked} aria-labelledby={labelId} onClick={() => onChange(!checked)} data-testid={testId} className={`relative h-6 w-11 flex-none rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-muted-foreground/35'}`}>
       <span className="sr-only">{label}</span>
-      <span className={`absolute top-1 h-4 w-4 rounded-full bg-[hsl(var(--card))] shadow transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+      <span className={`absolute top-1 h-4 w-4 rounded-full bg-card shadow transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
   </div>;
 }
 
 function InfoPanel({ title, icon, items }: { title: string; icon: ReactNode; items: string[] }) {
-  return <div className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-6 shadow-civic"><div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[hsl(var(--secondary))] text-[hsl(var(--primary))]">{icon}</div><h2 className="mt-5 font-display text-2xl font-bold">{title}</h2><ul className="mt-5 space-y-3">{items.map((item) => <li key={item} className="flex gap-3 text-sm text-[hsl(var(--muted-foreground))]"><Check size={16} className="mt-0.5 flex-none text-[#32805e]" />{item}</li>)}</ul><div className="mt-7 border-t border-[hsl(var(--border))] pt-4 text-xs leading-5 text-[hsl(var(--muted-foreground))]">The check follows the Harmonised Guidelines and Space Standards for Barrier-Free Built Environment.</div></div>;
+  return <div className="rounded-xl border border-card-border bg-card p-6 shadow-civic"><div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-primary">{icon}</div><h2 className="mt-5 font-display text-2xl font-bold">{title}</h2><ul className="mt-5 space-y-3">{items.map((item) => <li key={item} className="flex gap-3 text-sm text-muted-foreground"><Check size={16} className="mt-0.5 flex-none text-[#32805e]" />{item}</li>)}</ul><div className="mt-7 border-t border-border pt-4 text-xs leading-5 text-muted-foreground">The check follows the Harmonised Guidelines and Space Standards for Barrier-Free Built Environment.</div></div>;
 }
 
 function InspectionsPage() {
   const { buildings } = useAppAPI();
   const submitAudit = useSubmitAudit();
-  
+
+  const [activeTab, setActiveTab] = useState<'auditor_queue' | 'field_report'>('auditor_queue');
+
+  // Auditor Queue state
+  const [queue, setQueue] = useState<any[]>([]);
+  const [isLoadingQueue, setIsLoadingQueue] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<any | null>(null);
+  const [delayInput, setDelayInput] = useState<{ jobId: string; reason: string } | null>(null);
+  const [auditorNameInput, setAuditorNameInput] = useState("Auditor Inspector Rajesh Varma");
+  const [auditorNotesInput, setAuditorNotesInput] = useState("");
+
+  // Field Inspection Form state
   const [form, setForm] = useState<AuditInput>({ buildingId: '', auditorName: '', summary: '' });
   const [facilityTag, setFacilityTag] = useState("Main Entrance & Ramp");
   const [usabilityRating, setUsabilityRating] = useState("4");
@@ -1104,6 +1641,130 @@ function InspectionsPage() {
 
   const [submitted, setSubmitted] = useState(false);
 
+  const fetchQueue = async () => {
+    setIsLoadingQueue(true);
+    try {
+      const res = await fetch("/api/audits/queue");
+      if (res.ok) {
+        const data = await res.json();
+        setQueue(data.queue || []);
+      }
+    } catch (err) {
+      console.warn("Could not fetch audit queue:", err);
+    } finally {
+      setIsLoadingQueue(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQueue();
+  }, []);
+
+  const updateJobStatus = async (id: string, status: string, payload: Record<string, any> = {}) => {
+    try {
+      const res = await fetch(`/api/audits/queue/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, ...payload }),
+      });
+      if (res.ok) {
+        await fetchQueue();
+        if (selectedJob?.id === id) {
+          const updated = queue.find((q) => q.id === id);
+          if (updated) setSelectedJob({ ...updated, status, ...payload });
+        }
+      }
+    } catch (err) {
+      console.warn("Could not update audit job status:", err);
+    }
+  };
+
+  const handleAcceptRequest = async (job: any) => {
+    await updateJobStatus(job.id, "accepted_in_review");
+    setSelectedJob({ ...job, status: "accepted_in_review" });
+    addNotification("Audit Accepted into Review", `Auditor accepted ${job.buildingName}. Inspection dossier open for review.`, "info");
+  };
+
+  const handleDelayRequest = async (jobId: string) => {
+    if (!delayInput?.reason) return;
+    await updateJobStatus(jobId, "delayed", { delayReason: delayInput.reason });
+    setDelayInput(null);
+    addNotification("Audit Job Delayed", "Requested delay logged with reason for builder.", "warning");
+  };
+
+  // Expanded Detailed Auditor Report state
+  const [auditorDesignationInput, setAuditorDesignationInput] = useState("Senior Access Inspector, National Audit Council");
+  const [certificateIdInput, setCertificateIdInput] = useState("CERT-RPWD-2026-" + Math.floor(1000 + Math.random() * 9000));
+  const [rampSlopeVerifiedInput, setRampSlopeVerifiedInput] = useState("8.0% (1:12 slope standard)");
+  const [doorClearanceVerifiedInput, setDoorClearanceVerifiedInput] = useState("950 mm clear width");
+  const [tactilePavingQualityInput, setTactilePavingQualityInput] = useState("excellent");
+  const [washroomClearanceVerifiedInput, setWashroomClearanceVerifiedInput] = useState(true);
+  const [brailleSignageMountedInput, setBrailleSignageMountedInput] = useState(true);
+  const [emergencyRefugeVerifiedInput, setEmergencyRefugeVerifiedInput] = useState(true);
+  const [attachedProofFilesInput, setAttachedProofFilesInput] = useState<string[]>(["onsite_ramp_slope_photo.jpg", "dwg_layout_verification.pdf"]);
+  const [newProofFileName, setNewProofFileName] = useState("");
+
+  const handleApproveBlueprint = async (jobId: string) => {
+    const detailedReport = {
+      auditorName: auditorNameInput,
+      auditorDesignation: auditorDesignationInput,
+      certificateId: certificateIdInput,
+      inspectionDate: new Date().toISOString(),
+      rampSlopeVerified: rampSlopeVerifiedInput,
+      doorClearanceVerified: doorClearanceVerifiedInput,
+      tactilePavingQuality: tactilePavingQualityInput,
+      washroomClearanceVerified: washroomClearanceVerifiedInput,
+      brailleSignageMounted: brailleSignageMountedInput,
+      emergencyRefugeVerified: emergencyRefugeVerifiedInput,
+      detailedObservations: auditorNotesInput || "On-site audit and structural parameters verified against NBC 2016.",
+      correctiveActionsRequired: "None. All parameters fully compliant with NBC 2016.",
+      attachedProofFiles: attachedProofFilesInput,
+      recommendationDecision: "approved" as const,
+    };
+
+    await updateJobStatus(jobId, "approved", {
+      auditorNotes: auditorNotesInput || "On-site audit and structural parameters verified against NBC 2016.",
+      auditorName: auditorNameInput,
+      detailedReport,
+    });
+    setSelectedJob(null);
+    setAuditorNotesInput("");
+    addNotification("Blueprint & Audit Approved", `Official Compliance Certificate (${certificateIdInput}) issued.`, "success");
+  };
+
+  const handleRejectBlueprint = async (jobId: string) => {
+    if (!auditorNotesInput.trim()) {
+      alert("Please enter auditor remediation notes for rejection.");
+      return;
+    }
+
+    const detailedReport = {
+      auditorName: auditorNameInput,
+      auditorDesignation: auditorDesignationInput,
+      certificateId: certificateIdInput,
+      inspectionDate: new Date().toISOString(),
+      rampSlopeVerified: rampSlopeVerifiedInput,
+      doorClearanceVerified: doorClearanceVerifiedInput,
+      tactilePavingQuality: tactilePavingQualityInput,
+      washroomClearanceVerified: washroomClearanceVerifiedInput,
+      brailleSignageMounted: brailleSignageMountedInput,
+      emergencyRefugeVerified: emergencyRefugeVerifiedInput,
+      detailedObservations: auditorNotesInput,
+      correctiveActionsRequired: auditorNotesInput,
+      attachedProofFiles: attachedProofFilesInput,
+      recommendationDecision: "rejected" as const,
+    };
+
+    await updateJobStatus(jobId, "rejected", {
+      auditorNotes: auditorNotesInput,
+      auditorName: auditorNameInput,
+      detailedReport,
+    });
+    setSelectedJob(null);
+    setAuditorNotesInput("");
+    addNotification("Blueprint Audit Rejected", "Remediation requirements dispatched to builder.", "warning");
+  };
+
   const update = (key: keyof AuditInput, value: string) => setForm((current) => ({ ...current, [key]: value }));
 
   const submit = (event: FormEvent) => { 
@@ -1114,114 +1775,454 @@ function InspectionsPage() {
 
   if (submitted) return <div className="mx-auto max-w-[720px] px-5 py-16 md:px-10"><div className="animate-rise rounded-2xl border border-[#b9d6c3] bg-[#edf7ef] p-8 text-center shadow-civic"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32805e] text-white"><Check size={27} /></div><div className="mt-5 font-data text-[10px] uppercase tracking-[.18em] text-[#26734e]">Field Report Received</div><h1 className="mt-2 font-display text-4xl font-bold text-[#173b2c]">Thank you for making access visible.</h1><p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[#426b55]">Your field observation note has been added to the review queue. Verified observations help citizens plan their visit with confidence.</p><button type="button" onClick={() => { setSubmitted(false); setForm({ buildingId: '', auditorName: '', summary: '' }); setLocationArea(''); setRecommendedFix(''); }} data-testid="button-submit-another-audit" className="mt-7 rounded-lg bg-[#26734e] px-5 py-3 text-sm font-bold text-white">Submit another field report</button></div></div>;
 
+  const pendingJobs = queue.filter((q) => q.status === "pending");
+  const inReviewJobs = queue.filter((q) => q.status === "accepted_in_review");
+  const completedJobs = queue.filter((q) => q.status === "approved" || q.status === "rejected" || q.status === "delayed");
+
   return <div>
-    <PageHeader eyebrow="Community Field Reports" title={<>Help others with<br /><span className="text-[hsl(var(--primary))]">your observations.</span></>} description="Been there recently? Take a moment to share details about entrances, ramps, washrooms, and elevator facilities. Your direct experience helps the community visit safely." />
+    <PageHeader eyebrow="Compliance Verification Workspace" title={<>Auditor Review &amp;<br /><span className="text-primary">Inspection Queue.</span></>} description="Review builder blueprint submissions, inspect uploaded parameters, perform field verifications, and grant or delay accessibility certifications." />
     
-    <div className="mx-auto grid max-w-[1240px] gap-8 px-5 py-8 md:px-10 lg:grid-cols-[1fr_380px]">
-      <form onSubmit={submit} className="rounded-xl border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] p-5 shadow-civic md:p-7">
-        <div className="mb-7 border-b border-[hsl(var(--border))] pb-5">
-          <div className="font-data text-[10px] uppercase tracking-[.16em] text-[hsl(var(--primary))]">New observation</div>
-          <h2 className="mt-1 font-display text-2xl font-bold">Field inspection report</h2>
-        </div>
+    {/* Tab Navigation */}
+    <div className="mx-auto max-w-[1240px] px-5 md:px-10 mt-6 flex gap-3 border-b border-border pb-3">
+      <button
+        onClick={() => setActiveTab('auditor_queue')}
+        className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'auditor_queue' ? 'bg-primary text-primary-foreground shadow' : 'bg-card text-muted-foreground hover:text-foreground'}`}
+      >
+        <ClipboardCheck size={16} />
+        <span>Auditor Pending Works Queue</span>
+        {pendingJobs.length > 0 && <span className="bg-amber-500 text-black px-2 py-0.5 rounded-full text-xs font-extrabold">{pendingJobs.length}</span>}
+      </button>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div className="block text-xs font-bold">
-            <label htmlFor="select-audit-building" className="block mb-2">Building <span className="text-[#b74740]">*</span></label>
-            <select id="select-audit-building" required value={form.buildingId} onChange={(event) => update('buildingId', event.target.value)} data-testid="select-audit-building" className="h-11 w-full rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]">
-              <option value="">Select the building you visited</option>
-              {buildings?.map((building: any) => <option key={building.id} value={building.id}>{building.name} — {building.address}</option>)}
-            </select>
-          </div>
-
-          <Field label="Your Name or Organisation" value={form.auditorName} onChange={(value) => update('auditorName', value)} placeholder="e.g. Asha Rao, Access Now" testId="input-auditor-name" required />
-        </div>
-
-        <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <div className="block text-xs font-bold">
-            <label htmlFor="select-facility-tag" className="block mb-2">Inspection Category / Zone</label>
-            <select id="select-facility-tag" value={facilityTag} onChange={(e) => setFacilityTag(e.target.value)} className="h-11 w-full rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]">
-              <option>Main Entrance &amp; Ramp</option>
-              <option>Restroom / Washroom</option>
-              <option>Elevator / Lift</option>
-              <option>Dedicated PwD Parking</option>
-              <option>Tactile Pathway</option>
-              <option>Wayfinding Signage</option>
-              <option>Overall Building Facility</option>
-            </select>
-          </div>
-
-          <div className="block text-xs font-bold">
-            <label htmlFor="select-usability-rating" className="block mb-2">Accessibility Score / Usability</label>
-            <select id="select-usability-rating" value={usabilityRating} onChange={(e) => setUsabilityRating(e.target.value)} className="h-11 w-full rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]">
-              <option value="5">5 ★ - Fully Accessible &amp; Barrier-Free</option>
-              <option value="4">4 ★ - Usable with Minor Signage Gaps</option>
-              <option value="3">3 ★ - Moderate Barriers (Needs Assistance)</option>
-              <option value="2">2 ★ - Significant Gaps (Ramp steep / No lift)</option>
-              <option value="1">1 ★ - Inaccessible / Severe Barriers</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <Field label="Floor / Specific Location (Optional)" value={locationArea} onChange={setLocationArea} placeholder="e.g. Ground Floor East Wing, Room 102" testId="input-location-area" />
-          
-          <div className="block text-xs font-bold">
-            <label htmlFor="input-photo-proof" className="block mb-2">Photo Evidence Proof (Optional)</label>
-            <input id="input-photo-proof" type="file" onChange={(e) => setPhotoProofName(e.target.files?.[0]?.name || '')} className="text-xs text-muted-foreground file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[hsl(var(--secondary))] text-[hsl(var(--foreground))]" />
-            {photoProofName && <span className="text-[10px] text-green-700 font-bold mt-1 block">Attached: {photoProofName}</span>}
-          </div>
-        </div>
-
-        {/* Quick Obstruction Flags */}
-        <div className="mt-6 border-t border-[hsl(var(--border))] pt-5">
-          <label className="block text-xs font-bold mb-3 text-[hsl(var(--primary))] uppercase tracking-wider">Observed Barrier Flags (Check all that apply)</label>
-          <div className="grid gap-2 sm:grid-cols-2 text-xs">
-            <label className="flex items-center gap-2 cursor-pointer bg-[hsl(var(--background))] p-2.5 rounded-lg border">
-              <input type="checkbox" checked={obstructions.rampBlocked} onChange={(e) => setObstructions({...obstructions, rampBlocked: e.target.checked})} />
-              <span>Ramp blocked / excessively steep</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer bg-[hsl(var(--background))] p-2.5 rounded-lg border">
-              <input type="checkbox" checked={obstructions.restroomLocked} onChange={(e) => setObstructions({...obstructions, restroomLocked: e.target.checked})} />
-              <span>Accessible toilet locked / used as storage</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer bg-[hsl(var(--background))] p-2.5 rounded-lg border">
-              <input type="checkbox" checked={obstructions.elevatorDown} onChange={(e) => setObstructions({...obstructions, elevatorDown: e.target.checked})} />
-              <span>Elevator non-functional / Braille missing</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer bg-[hsl(var(--background))] p-2.5 rounded-lg border">
-              <input type="checkbox" checked={obstructions.tactileBroken} onChange={(e) => setObstructions({...obstructions, tactileBroken: e.target.checked})} />
-              <span>Tactile guidance broken or missing</span>
-            </label>
-          </div>
-        </div>
-
-        <div className="mt-5 block text-xs font-bold">
-          <label htmlFor="textarea-audit-summary" className="block mb-2">Detailed Observations <span className="text-[#b74740]">*</span></label>
-          <textarea id="textarea-audit-summary" required minLength={1} value={form.summary} onChange={(event) => update('summary', event.target.value)} data-testid="textarea-audit-summary" placeholder="Describe the entrance, routes, turning clearance, grab rails, or barriers encountered…" className="min-h-28 w-full resize-y rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] p-3 text-sm leading-6 outline-none placeholder:text-[hsl(var(--muted-foreground)/.65)] focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]" />
-        </div>
-
-        <div className="mt-4 block text-xs font-bold">
-          <label htmlFor="input-recommended-fix" className="block mb-2">Actionable Recommendation for Building Manager (Optional)</label>
-          <input id="input-recommended-fix" value={recommendedFix} onChange={(e) => setRecommendedFix(e.target.value)} placeholder="e.g. Clear storage boxes from washroom; Add rubber slope mat to entrance step" className="h-11 w-full rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] px-3 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]" />
-        </div>
-
-        {submitAudit.isError && <p data-testid="text-audit-error" className="mt-3 text-xs text-[#a53f3a]">This report could not be submitted. Please try again.</p>}
-        
-        <button disabled={submitAudit.isPending} type="submit" data-testid="button-submit-audit" className="mt-7 flex w-full items-center justify-center gap-2 rounded-lg bg-[hsl(var(--primary))] px-5 py-3.5 text-sm font-bold text-[hsl(var(--primary-foreground))] transition-transform hover:-translate-y-0.5 disabled:opacity-70">
-          {submitAudit.isPending ? <><Loader2 size={16} className="animate-spin" />Submitting report…</> : <><Send size={16} />Publish Field Inspection Report</>}
-        </button>
-      </form>
-
-      <div>
-        <InfoPanel title="A useful note is specific" icon={<Footprints size={20} />} items={[
-          'Specify the exact zone (e.g. Main Ramp, West Elevator)',
-          'Note clearances (door width, turning radius in washrooms)',
-          'Check if emergency pull-cords & grab rails are present',
-          'Suggest actionable fixes for building authorities',
-          'Upload photo evidence to validate the inspection'
-        ]} />
-      </div>
+      <button
+        onClick={() => setActiveTab('field_report')}
+        className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'field_report' ? 'bg-primary text-primary-foreground shadow' : 'bg-card text-muted-foreground hover:text-foreground'}`}
+      >
+        <Footprints size={16} />
+        <span>Submit Community Field Observation</span>
+      </button>
     </div>
+
+    {activeTab === 'auditor_queue' ? (
+      <div className="mx-auto max-w-[1240px] px-5 py-8 md:px-10 space-y-8">
+        
+        {/* Selected Job Detailed Dossier Workspace */}
+        {selectedJob ? (
+          <div className="rounded-2xl border-2 border-teal-500/40 bg-card p-6 shadow-2xl space-y-6 animate-rise">
+            <div className="flex justify-between items-start border-b border-border pb-4">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
+                  {selectedJob.stage === 'blueprint_approval' ? 'Blueprint Approval Dossier' : 'On-Site Construction Inspection Dossier'}
+                </span>
+                <h2 className="font-display text-3xl font-bold mt-2">{selectedJob.buildingName}</h2>
+                <p className="text-xs text-muted-foreground mt-1">Builder: <strong>{selectedJob.builderName}</strong> · File: <strong>{selectedJob.blueprintName}</strong></p>
+              </div>
+              <button onClick={() => setSelectedJob(null)} className="bg-secondary text-foreground px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-border">
+                Close Workspace
+              </button>
+            </div>
+
+            {/* AI Report & Uploaded Data Grid */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="rounded-xl border border-border bg-secondary/30 p-5 space-y-3">
+                <h3 className="font-display text-sm font-bold text-primary uppercase tracking-wider">Uploaded Structural Parameters</h3>
+                <div className="text-xs space-y-2">
+                  <div className="flex justify-between border-b pb-1">
+                    <span className="text-muted-foreground">Entry Ramp Slope:</span>
+                    <span className="font-bold text-foreground">8.0% (NBC Compliant 1:12)</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-1">
+                    <span className="text-muted-foreground">Clear Door Opening:</span>
+                    <span className="font-bold text-foreground">950 mm (&gt;900mm required)</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-1">
+                    <span className="text-muted-foreground">Attached Reference:</span>
+                    <span className="font-mono text-teal-700 font-bold">{selectedJob.blueprintName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Submission Time:</span>
+                    <span className="font-bold">{new Date(selectedJob.submittedAt).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-border">
+                  <h4 className="text-xs font-bold text-primary mb-2">Submitted Access Provisions</h4>
+                  <div className="grid grid-cols-2 gap-1 text-[11px]">
+                    <div className="flex items-center gap-1"><CheckCircle2 size={12} className="text-green-600"/> Lift Braille &amp; Voice</div>
+                    <div className="flex items-center gap-1"><CheckCircle2 size={12} className="text-green-600"/> Accessible Restroom</div>
+                    <div className="flex items-center gap-1"><CheckCircle2 size={12} className="text-green-600"/> Tactile Path</div>
+                    <div className="flex items-center gap-1"><CheckCircle2 size={12} className="text-green-600"/> PwD Parking Slot</div>
+                    <div className="flex items-center gap-1"><CheckCircle2 size={12} className="text-green-600"/> High-Contrast Signage</div>
+                    <div className="flex items-center gap-1"><CheckCircle2 size={12} className="text-green-600"/> Safe Refuge Zone</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Verification Report */}
+              <div className="rounded-xl border border-border bg-secondary/30 p-5 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-display text-sm font-bold text-primary uppercase tracking-wider">AI Pre-Audit Analysis</h3>
+                  <span className="bg-green-100 text-green-800 font-bold px-3 py-1 rounded-full text-xs">AI Score: {selectedJob.aiScore}%</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{selectedJob.aiReport?.summary || "Pre-verification indicates strong adherence to RPwD Act guidelines."}</p>
+
+                {selectedJob.aiReport?.gaps?.length > 0 ? (
+                  <div className="space-y-2 pt-2">
+                    <span className="text-xs font-bold text-amber-700">Flagged NBC Gaps ({selectedJob.aiReport.gaps.length})</span>
+                    {selectedJob.aiReport.gaps.map((g: any) => (
+                      <div key={g.id} className="p-2.5 rounded bg-amber-50 border border-amber-200 text-xs">
+                        <div className="font-bold text-amber-900">{g.title} ({g.reference})</div>
+                        <div className="text-[11px] text-amber-700 mt-1">{g.recommendation}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-green-50 text-green-800 rounded-lg text-xs font-semibold flex items-center gap-2">
+                    <CheckCircle2 size={16} /> All automated NBC 2016 safety parameters passed.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Human Auditor Final Detailed Determination Form */}
+            <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-6 space-y-4">
+              <div className="flex justify-between items-center border-b border-border pb-3">
+                <h3 className="font-display text-lg font-bold text-primary">Human Auditor Inspection Report &amp; Certification</h3>
+                <span className="font-mono text-xs font-bold text-teal-800 bg-teal-100 px-3 py-1 rounded-full">{certificateIdInput}</span>
+              </div>
+              
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Auditor Name" value={auditorNameInput} onChange={setAuditorNameInput} placeholder="e.g. Inspector Rajesh Varma" testId="input-auditor-inspector-name" required />
+                <Field label="Auditor Designation / Authority" value={auditorDesignationInput} onChange={setAuditorDesignationInput} placeholder="e.g. Senior Access Inspector, Council of Accessibility Auditors" testId="input-auditor-designation" required />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="On-Site Ramp Slope Verified" value={rampSlopeVerifiedInput} onChange={setRampSlopeVerifiedInput} placeholder="e.g. 8.0% (1:12 slope)" testId="input-ramp-slope-verified" />
+                <Field label="Clear Door Width Verified" value={doorClearanceVerifiedInput} onChange={setDoorClearanceVerifiedInput} placeholder="e.g. 950 mm width" testId="input-door-width-verified" />
+                
+                <div className="block text-xs font-bold">
+                  <label htmlFor="select-tactile-quality" className="block mb-2">Tactile Tile Alignment Quality</label>
+                  <select
+                    id="select-tactile-quality"
+                    value={tactilePavingQualityInput}
+                    onChange={(e) => setTactilePavingQualityInput(e.target.value)}
+                    className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30"
+                  >
+                    <option value="excellent">Excellent - NBC 2016 Compliant</option>
+                    <option value="adequate">Adequate - Usable with Minor Gaps</option>
+                    <option value="needs_work">Needs Work - Re-alignment Required</option>
+                    <option value="non_compliant">Non-Compliant - Missing Tiles</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Verified Facilities Toggles */}
+              <div className="p-3.5 bg-background rounded-xl border space-y-2 text-xs font-semibold">
+                <div className="text-primary font-bold uppercase tracking-wider text-[11px] mb-1">On-Site Field Verification Checkboxes</div>
+                <div className="grid grid-cols-3 gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={washroomClearanceVerifiedInput} onChange={(e) => setWashroomClearanceVerifiedInput(e.target.checked)} />
+                    <span>Washroom 1500mm Clearance</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={brailleSignageMountedInput} onChange={(e) => setBrailleSignageMountedInput(e.target.checked)} />
+                    <span>Braille Signage Mounted 1.4m</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={emergencyRefugeVerifiedInput} onChange={(e) => setEmergencyRefugeVerifiedInput(e.target.checked)} />
+                    <span>Fire Refuge 2-Way Intercom</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Detailed Field Observations & Actionable Remediation Notes */}
+              <div className="block text-xs font-bold">
+                <label htmlFor="textarea-auditor-detailed-notes" className="block mb-2">Detailed Inspection Observations &amp; Certification Statement <span className="text-[#b74740]">*</span></label>
+                <textarea
+                  id="textarea-auditor-detailed-notes"
+                  required
+                  value={auditorNotesInput}
+                  onChange={(e) => setAuditorNotesInput(e.target.value)}
+                  placeholder="Record full observations, measured slope dimensions, grab rail height, door clearance, and certification conditions..."
+                  className="min-h-24 w-full resize-y rounded-lg border border-input bg-background p-3 text-sm leading-6 outline-none focus:ring-2 focus:ring-ring/30"
+                />
+              </div>
+
+              {/* File Upload & Proof Documents Attachment Section */}
+              <div className="p-4 bg-background rounded-xl border border-dashed space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                    <FileUp size={14} /> Attach Official Inspection Proof Files / Photos
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">{attachedProofFilesInput.length} file(s) attached</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      const name = e.target.files?.[0]?.name;
+                      if (name) {
+                        setAttachedProofFilesInput([...attachedProofFilesInput, name]);
+                        addNotification("File Attached", `Attached ${name} to audit report proof files.`, "info");
+                      }
+                    }}
+                    className="text-xs text-muted-foreground file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-secondary text-foreground flex-1"
+                  />
+                </div>
+
+                {attachedProofFilesInput.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {attachedProofFilesInput.map((file, idx) => (
+                      <span key={idx} className="bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                        <FileCheck2 size={12} /> {file}
+                        <button onClick={() => setAttachedProofFilesInput(attachedProofFilesInput.filter((_, i) => i !== idx))} className="text-teal-900 hover:text-red-600 font-bold ml-1">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4 pt-2">
+                <button
+                  onClick={() => handleApproveBlueprint(selectedJob.id)}
+                  className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition"
+                >
+                  <CheckCircle2 size={18} />
+                  <span>Accept &amp; Approve Accessibility Certificate</span>
+                </button>
+
+                <button
+                  onClick={() => handleRejectBlueprint(selectedJob.id)}
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition"
+                >
+                  <X size={18} />
+                  <span>Reject &amp; Request Remediation</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Pending Works Queue */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="font-display text-2xl font-bold">Pending Audit Works ({pendingJobs.length})</h2>
+            <button onClick={fetchQueue} className="text-xs text-primary font-semibold hover:underline flex items-center gap-1">
+              Refresh Queue
+            </button>
+          </div>
+
+          {isLoadingQueue ? (
+            <div className="p-8 text-center text-muted-foreground"><Loader2 className="animate-spin inline mr-2"/> Loading audit queue…</div>
+          ) : pendingJobs.length === 0 ? (
+            <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground">No pending audit jobs in queue.</div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {pendingJobs.map((job) => (
+                <div key={job.id} className="border border-card-border bg-card rounded-xl p-5 shadow-civic space-y-3">
+                  <div className="flex justify-between items-start">
+                    <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${job.stage === 'blueprint_approval' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
+                      {job.stage === 'blueprint_approval' ? 'Blueprint Approval' : 'On-Site Inspection'}
+                    </span>
+                    <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded">AI Score: {job.aiScore}%</span>
+                  </div>
+
+                  <div>
+                    <h3 className="font-display text-lg font-bold">{job.buildingName}</h3>
+                    <p className="text-xs text-muted-foreground">Builder: {job.builderName} · File: {job.blueprintName}</p>
+                  </div>
+
+                  {delayInput?.jobId === job.id ? (
+                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg space-y-2">
+                      <label className="text-xs font-bold text-amber-900 block">Delay Reason for Builder:</label>
+                      <input
+                        value={delayInput?.reason || ''}
+                        onChange={(e) => setDelayInput({ jobId: job.id, reason: e.target.value })}
+                        placeholder="e.g. Requesting updated DWG structural landing clearance..."
+                        className="w-full text-xs p-2 border rounded"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => handleDelayRequest(job.id)} className="bg-amber-600 text-white text-xs font-bold px-3 py-1 rounded">Confirm Delay</button>
+                        <button onClick={() => setDelayInput(null)} className="text-xs text-gray-600 px-2">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => handleAcceptRequest(job)}
+                        className="flex-1 bg-teal-600 hover:bg-teal-500 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1"
+                      >
+                        <Check size={14} /> Accept Request
+                      </button>
+                      
+                      <button
+                        onClick={() => setDelayInput({ jobId: job.id, reason: "" })}
+                        className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1"
+                      >
+                        Delay Request
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Active In-Review Audits */}
+        {inReviewJobs.length > 0 && (
+          <div className="space-y-4 pt-4 border-t border-border">
+            <h2 className="font-display text-xl font-bold text-teal-600">Active In-Review Audits ({inReviewJobs.length})</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {inReviewJobs.map((job) => (
+                <div key={job.id} className="border-2 border-teal-500 bg-teal-50/20 rounded-xl p-5 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-xs text-teal-800 uppercase tracking-wider">Accepted in Review</span>
+                    <button onClick={() => setSelectedJob(job)} className="bg-teal-600 text-white text-xs font-bold px-3 py-1 rounded-lg hover:bg-teal-500">
+                      Open Inspection Workspace
+                    </button>
+                  </div>
+                  <div>
+                    <h3 className="font-display text-lg font-bold">{job.buildingName}</h3>
+                    <p className="text-xs text-muted-foreground">Builder: {job.builderName}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Historical Approved / Delayed / Rejected Audits */}
+        {completedJobs.length > 0 && (
+          <div className="space-y-4 pt-4 border-t border-border">
+            <h2 className="font-display text-xl font-bold text-muted-foreground">Processed Audits History</h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              {completedJobs.map((job) => (
+                <div key={job.id} className="border border-card-border bg-card rounded-xl p-4 text-xs space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className={`font-bold uppercase text-[10px] px-2 py-0.5 rounded ${job.status === 'approved' ? 'bg-green-100 text-green-800' : job.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
+                      {job.status}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">{new Date(job.reviewedAt || job.submittedAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="font-bold text-sm">{job.buildingName}</div>
+                  <div className="text-[11px] text-muted-foreground">Builder: {job.builderName}</div>
+                  {job.auditorNotes && <div className="p-2 bg-secondary rounded text-[11px] font-medium">{job.auditorNotes}</div>}
+                  {job.delayReason && <div className="p-2 bg-amber-50 text-amber-900 rounded text-[11px]">Delayed: {job.delayReason}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
+    ) : (
+      <div className="mx-auto grid max-w-[1240px] gap-8 px-5 py-8 md:px-10 lg:grid-cols-[1fr_380px]">
+        <form onSubmit={submit} className="rounded-xl border border-card-border bg-card p-5 shadow-civic md:p-7">
+          <div className="mb-7 border-b border-border pb-5">
+            <div className="font-data text-[10px] uppercase tracking-[.16em] text-primary">New observation</div>
+            <h2 className="mt-1 font-display text-2xl font-bold">Field inspection report</h2>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="block text-xs font-bold">
+              <label htmlFor="select-audit-building" className="block mb-2">Building <span className="text-[#b74740]">*</span></label>
+              <select id="select-audit-building" required value={form.buildingId} onChange={(event) => update('buildingId', event.target.value)} data-testid="select-audit-building" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30">
+                <option value="">Select the building you visited</option>
+                {buildings?.map((building: any) => <option key={building.id} value={building.id}>{building.name} — {building.address}</option>)}
+              </select>
+            </div>
+
+            <Field label="Your Name or Organisation" value={form.auditorName} onChange={(value) => update('auditorName', value)} placeholder="e.g. Asha Rao, Access Now" testId="input-auditor-name" required />
+          </div>
+
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <div className="block text-xs font-bold">
+              <label htmlFor="select-facility-tag" className="block mb-2">Inspection Category / Zone</label>
+              <select id="select-facility-tag" value={facilityTag} onChange={(e) => setFacilityTag(e.target.value)} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30">
+                <option>Main Entrance &amp; Ramp</option>
+                <option>Restroom / Washroom</option>
+                <option>Elevator / Lift</option>
+                <option>Dedicated PwD Parking</option>
+                <option>Tactile Pathway</option>
+                <option>Wayfinding Signage</option>
+                <option>Overall Building Facility</option>
+              </select>
+            </div>
+
+            <div className="block text-xs font-bold">
+              <label htmlFor="select-usability-rating" className="block mb-2">Accessibility Score / Usability</label>
+              <select id="select-usability-rating" value={usabilityRating} onChange={(e) => setUsabilityRating(e.target.value)} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30">
+                <option value="5">5 ★ - Fully Accessible &amp; Barrier-Free</option>
+                <option value="4">4 ★ - Usable with Minor Signage Gaps</option>
+                <option value="3">3 ★ - Moderate Barriers (Needs Assistance)</option>
+                <option value="2">2 ★ - Significant Gaps (Ramp steep / No lift)</option>
+                <option value="1">1 ★ - Inaccessible / Severe Barriers</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <Field label="Floor / Specific Location (Optional)" value={locationArea} onChange={setLocationArea} placeholder="e.g. Ground Floor East Wing, Room 102" testId="input-location-area" />
+            
+            <div className="block text-xs font-bold">
+              <label htmlFor="input-photo-proof" className="block mb-2">Photo Evidence Proof (Optional)</label>
+              <input id="input-photo-proof" type="file" onChange={(e) => setPhotoProofName(e.target.files?.[0]?.name || '')} className="text-xs text-muted-foreground file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-secondary text-foreground" />
+              {photoProofName && <span className="text-[10px] text-green-700 font-bold mt-1 block">Attached: {photoProofName}</span>}
+            </div>
+          </div>
+
+          {/* Quick Obstruction Flags */}
+          <div className="mt-6 border-t border-border pt-5">
+            <label className="block text-xs font-bold mb-3 text-primary uppercase tracking-wider">Observed Barrier Flags (Check all that apply)</label>
+            <div className="grid gap-2 sm:grid-cols-2 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer bg-background p-2.5 rounded-lg border">
+                <input type="checkbox" checked={obstructions.rampBlocked} onChange={(e) => setObstructions({...obstructions, rampBlocked: e.target.checked})} />
+                <span>Ramp blocked / excessively steep</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer bg-background p-2.5 rounded-lg border">
+                <input type="checkbox" checked={obstructions.restroomLocked} onChange={(e) => setObstructions({...obstructions, restroomLocked: e.target.checked})} />
+                <span>Accessible toilet locked / used as storage</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer bg-background p-2.5 rounded-lg border">
+                <input type="checkbox" checked={obstructions.elevatorDown} onChange={(e) => setObstructions({...obstructions, elevatorDown: e.target.checked})} />
+                <span>Elevator non-functional / Braille missing</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer bg-background p-2.5 rounded-lg border">
+                <input type="checkbox" checked={obstructions.tactileBroken} onChange={(e) => setObstructions({...obstructions, tactileBroken: e.target.checked})} />
+                <span>Tactile guidance broken or missing</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-5 block text-xs font-bold">
+            <label htmlFor="textarea-audit-summary" className="block mb-2">Detailed Observations <span className="text-[#b74740]">*</span></label>
+            <textarea id="textarea-audit-summary" required minLength={1} value={form.summary} onChange={(event) => update('summary', event.target.value)} data-testid="textarea-audit-summary" placeholder="Describe the entrance, routes, turning clearance, grab rails, or barriers encountered…" className="min-h-28 w-full resize-y rounded-lg border border-input bg-background p-3 text-sm leading-6 outline-none placeholder:text-muted-foreground/65 focus:ring-2 focus:ring-ring/30" />
+          </div>
+
+          <div className="mt-4 block text-xs font-bold">
+            <label htmlFor="input-recommended-fix" className="block mb-2">Actionable Recommendation for Building Manager (Optional)</label>
+            <input id="input-recommended-fix" value={recommendedFix} onChange={(e) => setRecommendedFix(e.target.value)} placeholder="e.g. Clear storage boxes from washroom; Add rubber slope mat to entrance step" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/30" />
+          </div>
+
+          {submitAudit.isError && <p data-testid="text-audit-error" className="mt-3 text-xs text-[#a53f3a]">This report could not be submitted. Please try again.</p>}
+          
+          <button disabled={submitAudit.isPending} type="submit" data-testid="button-submit-audit" className="mt-7 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-70">
+            {submitAudit.isPending ? <><Loader2 size={16} className="animate-spin" />Submitting report…</> : <><Send size={16} />Publish Field Inspection Report</>}
+          </button>
+        </form>
+
+        <div>
+          <InfoPanel title="A useful note is specific" icon={<Footprints size={20} />} items={[
+            'Specify the exact zone (e.g. Main Ramp, West Elevator)',
+            'Note clearances (door width, turning radius in washrooms)',
+            'Check if emergency pull-cords & grab rails are present',
+            'Suggest actionable fixes for building authorities',
+            'Upload photo evidence to validate the inspection'
+          ]} />
+        </div>
+      </div>
+    )}
   </div>;
 }
 
@@ -1239,22 +2240,22 @@ function HelplinesPage() {
   }, [searchQuery]);
 
   return <div>
-    <PageHeader eyebrow="Safety Directory" title={<>Emergency &amp; Support<br /><span className="text-[hsl(var(--primary))]">Helplines.</span></>} description="Browse and search verified helplines for immediate police assistance, mental health support, ambulance, and specialized query authorities." />
+    <PageHeader eyebrow="Safety Directory" title={<>Emergency &amp; Support<br /><span className="text-primary">Helplines.</span></>} description="Browse and search verified helplines for immediate police assistance, mental health support, ambulance, and specialized query authorities." />
     <div className="mx-auto max-w-[1240px] px-5 py-8 md:px-10">
       <div className="relative mb-8 max-w-xl">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
-        <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search query (e.g. mental aid, ambulance, police)..." className="h-12 w-full rounded-xl border border-[hsl(var(--input))] bg-[hsl(var(--card))] pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/.3)]" />
+        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search query (e.g. mental aid, ambulance, police)..." className="h-12 w-full rounded-xl border border-input bg-card pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-ring/30" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((item: any, idx: number) => (
-          <div key={idx} className="border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] rounded-xl p-5 shadow-civic flex flex-col justify-between">
+          <div key={idx} className="border border-card-border bg-card rounded-xl p-5 shadow-civic flex flex-col justify-between">
             <div>
-              <div className="font-data text-[9px] uppercase tracking-wider text-[hsl(var(--primary))] font-bold">{item.authority}</div>
+              <div className="font-data text-[9px] uppercase tracking-wider text-primary font-bold">{item.authority}</div>
               <h3 className="font-display text-lg font-bold mt-1.5">{item.name}</h3>
             </div>
             <div className="mt-6 flex items-center justify-between">
-              <span className="font-mono text-xl font-extrabold text-[hsl(var(--accent-foreground))] bg-[hsl(var(--accent))] px-2.5 py-1 rounded-lg">{item.number}</span>
-              <a href={`tel:${item.number.split('/')[0].trim()}`} className="text-xs font-bold text-[hsl(var(--primary))] hover:underline flex items-center gap-1">Call Now <ChevronRight size={14} /></a>
+              <span className="font-mono text-xl font-extrabold text-accent-foreground bg-accent px-2.5 py-1 rounded-lg">{item.number}</span>
+              <a href={`tel:${item.number.split('/')[0].trim()}`} className="text-xs font-bold text-primary hover:underline flex items-center gap-1">Call Now <ChevronRight size={14} /></a>
             </div>
           </div>
         ))}
@@ -1318,7 +2319,7 @@ function ComplaintsPage() {
   };
 
   return <div>
-    <PageHeader eyebrow="Accountability Portal" title={<>Transparent Complaint<br /><span className="text-[hsl(var(--primary))]">Remediation Pipeline.</span></>} description="Track accessibility complaints step-by-step just like tracking an online delivery. Clear assignments encourage civic accountability." />
+    <PageHeader eyebrow="Accountability Portal" title={<>Transparent Complaint<br /><span className="text-primary">Remediation Pipeline.</span></>} description="Track accessibility complaints step-by-step just like tracking an online delivery. Clear assignments encourage civic accountability." />
     
     <div className="mx-auto max-w-[1240px] px-5 py-8 md:px-10 grid gap-8 lg:grid-cols-[1fr_380px]">
       
@@ -1331,35 +2332,35 @@ function ComplaintsPage() {
           const currentStepIdx = c.status === "Submitted" ? 0 : c.status === "Assigned" ? 1 : c.status === "In Progress" ? 2 : 3;
 
           return (
-            <div key={c.id} className="border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] rounded-xl p-5 shadow-civic">
+            <div key={c.id} className="border border-card-border bg-card rounded-xl p-5 shadow-civic">
               <div className="flex justify-between items-start gap-4">
                 <div>
                   <span className="font-data text-[9px] uppercase tracking-wider text-muted-foreground">ID: {c.id} · Filed by {c.filedBy}</span>
                   <h3 className="font-display text-lg font-bold mt-1">{c.buildingName}</h3>
-                  <p className="text-xs text-[hsl(var(--primary))] font-semibold mt-1">Issue: {c.category}</p>
+                  <p className="text-xs text-primary font-semibold mt-1">Issue: {c.category}</p>
                   <p className="text-xs text-muted-foreground mt-2">{c.details}</p>
                 </div>
                 <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${c.status === 'Resolved' ? 'bg-green-100 text-green-700' : c.status === 'Dismissed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{c.status}</span>
               </div>
 
               {/* Progress pipeline (shipping tracker style) */}
-              <div className="mt-6 border-t border-[hsl(var(--border))] pt-4">
+              <div className="mt-6 border-t border-border pt-4">
                 <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground">
                   {steps.map((st, idx) => (
                     <div key={st} className="flex flex-col items-center flex-1 relative">
-                      <div className={`h-5 w-5 rounded-full flex items-center justify-center border-2 mb-1.5 z-10 bg-[hsl(var(--card))] ${idx <= currentStepIdx ? 'border-[hsl(var(--primary))] text-[hsl(var(--primary))] font-black' : 'border-gray-300'}`}>
+                      <div className={`h-5 w-5 rounded-full flex items-center justify-center border-2 mb-1.5 z-10 bg-card ${idx <= currentStepIdx ? 'border-primary text-primary font-black' : 'border-gray-300'}`}>
                         {idx < currentStepIdx ? "✓" : idx === currentStepIdx ? "●" : idx + 1}
                       </div>
-                      <span className={idx === currentStepIdx ? 'text-[hsl(var(--primary))]' : ''}>{st}</span>
+                      <span className={idx === currentStepIdx ? 'text-primary' : ''}>{st}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="mt-5 bg-[hsl(var(--secondary)/.3)] p-3 rounded-lg flex justify-between items-center text-xs">
+              <div className="mt-5 bg-secondary/30 p-3 rounded-lg flex justify-between items-center text-xs">
                 <div>
                   <div className="text-[10px] text-muted-foreground uppercase">Assigned Officer</div>
-                  <div className="font-bold flex items-center gap-1"><Shield size={13} className="text-[hsl(var(--primary))]" /> {c.officer}</div>
+                  <div className="font-bold flex items-center gap-1"><Shield size={13} className="text-primary" /> {c.officer}</div>
                 </div>
                 {c.dismissReason && (
                   <div className="text-right border-l pl-3 ml-3 max-w-xs">
@@ -1377,7 +2378,7 @@ function ComplaintsPage() {
       <div className="space-y-6">
         
         {/* File Complaint Form */}
-        <div className="border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] rounded-xl p-5 shadow-civic">
+        <div className="border border-card-border bg-card rounded-xl p-5 shadow-civic">
           <h3 className="font-display text-lg font-bold mb-4">File Accessibility Complaint</h3>
           
           {isLockedOut ? (
@@ -1406,16 +2407,16 @@ function ComplaintsPage() {
                 <label className="block text-xs font-bold mb-1">Details / Barriers Encountered</label>
                 <textarea required value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Describe accessibility gaps clearly..." className="w-full min-h-20 border rounded-lg p-2 text-xs" />
               </div>
-              <button type="submit" className="w-full bg-[hsl(var(--primary))] text-white rounded-lg h-10 text-xs font-bold">Register Complaint</button>
+              <button type="submit" className="w-full bg-primary text-white rounded-lg h-10 text-xs font-bold">Register Complaint</button>
             </form>
           )}
         </div>
 
-        {/* Officer Workspace Simulator (for demoing accountability/strikes) */}
-        {profile.role === 'officer' && (
-          <div className="border border-[hsl(var(--accent))] bg-[hsl(var(--secondary)/.2)] rounded-xl p-5 shadow-civic">
+        {/* Officer/Admin Workspace Simulator (for demoing accountability/strikes) */}
+        {['officer', 'admin', 'auditor'].includes(profile?.role) && (
+          <div className="border border-accent bg-secondary/20 rounded-xl p-5 shadow-civic">
             <div className="flex items-center gap-2 mb-3">
-              <Shield className="text-[hsl(var(--primary))]" />
+              <Shield className="text-primary" />
               <h3 className="font-display text-sm font-bold">Officer Workspace Simulator</h3>
             </div>
             <p className="text-[11px] text-muted-foreground mb-4">Simulate resolving or dismissing a complaint. Dismissals tagged with 'fake' increase the user's strikes.</p>
@@ -1484,7 +2485,7 @@ function VolunteeringPage() {
   };
 
   return <div>
-    <PageHeader eyebrow="Community Action" title={<>Spend Special Occasions<br /><span className="text-[hsl(var(--primary))]">Helping Others.</span></>} description="Book slots to spend birthdays or anniversaries with residents in old age homes (Vrudhashrams), orphanages, and schools, or support them with donations." />
+    <PageHeader eyebrow="Community Action" title={<>Spend Special Occasions<br /><span className="text-primary">Helping Others.</span></>} description="Book slots to spend birthdays or anniversaries with residents in old age homes (Vrudhashrams), orphanages, and schools, or support them with donations." />
     
     <div className="mx-auto max-w-[1240px] px-5 py-8 md:px-10 grid gap-8 lg:grid-cols-[1fr_400px]">
       
@@ -1492,7 +2493,7 @@ function VolunteeringPage() {
       <div className="space-y-6">
         <h2 className="font-display text-2xl font-bold">Volunteer &amp; Donation Hub</h2>
         
-        <div className="border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] rounded-xl p-5 shadow-civic">
+        <div className="border border-card-border bg-card rounded-xl p-5 shadow-civic">
           <h3 className="font-display text-lg font-bold mb-4">Book Occasion Slot / Volunteer Work</h3>
           
           <form onSubmit={handleBook} className="space-y-4">
@@ -1518,19 +2519,19 @@ function VolunteeringPage() {
                 {ngo.tasks.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <button type="submit" className="w-full bg-[hsl(var(--primary))] text-white rounded-lg h-11 text-xs font-bold flex items-center justify-center gap-1">
+            <button type="submit" className="w-full bg-primary text-white rounded-lg h-11 text-xs font-bold flex items-center justify-center gap-1">
               <Calendar size={15} /> Book Booking Slot
             </button>
           </form>
         </div>
 
         {/* Donations Panel */}
-        <div className="border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] rounded-xl p-5 shadow-civic">
+        <div className="border border-card-border bg-card rounded-xl p-5 shadow-civic">
           <h3 className="font-display text-lg font-bold mb-2">Donate Funds</h3>
           <p className="text-xs text-muted-foreground mb-4">Support {ngo.name} directly. Donations are tax-deductible.</p>
           <form onSubmit={handleDonate} className="flex gap-3">
             <input required type="number" value={donateAmount} onChange={(e) => setDonateAmount(e.target.value)} className="w-1/2 h-10 border rounded-lg px-3 text-xs" placeholder="Amount (INR)" />
-            <button type="submit" className="flex-1 bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))] rounded-lg h-10 text-xs font-bold flex items-center justify-center gap-1">
+            <button type="submit" className="flex-1 bg-accent text-accent-foreground rounded-lg h-10 text-xs font-bold flex items-center justify-center gap-1">
               <Gift size={15} /> Donate Now
             </button>
           </form>
@@ -1547,8 +2548,8 @@ function VolunteeringPage() {
           </div>
         ) : (
           volunteers.map((v) => (
-            <div key={v.id} className="border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] rounded-xl p-4 shadow-civic">
-              <div className="font-data text-[9px] uppercase tracking-wider text-[hsl(var(--primary))] font-bold">{v.ngoType}</div>
+            <div key={v.id} className="border border-card-border bg-card rounded-xl p-4 shadow-civic">
+              <div className="font-data text-[9px] uppercase tracking-wider text-primary font-bold">{v.ngoType}</div>
               <h4 className="font-bold text-sm mt-1">{v.ngoName}</h4>
               <p className="text-xs text-muted-foreground mt-2">Date: <strong>{new Date(v.date).toLocaleDateString('en-IN')}</strong></p>
               <p className="text-xs text-muted-foreground">Task: <strong>{v.task}</strong></p>
@@ -1568,17 +2569,17 @@ function VolunteeringPage() {
 function SafeSpotsPage() {
   const { safeSpots } = useAppAPI();
   return <div>
-    <PageHeader eyebrow="Safety Protocols" title={<>Your Shortcut<br /><span className="text-[hsl(var(--primary))]">Safe Spots.</span></>} description="Quickly access safe zones, refuge rooms, and fire escapes inside complex buildings. These spots are pre-saved for instant retrieval during emergencies." />
+    <PageHeader eyebrow="Safety Protocols" title={<>Your Shortcut<br /><span className="text-primary">Safe Spots.</span></>} description="Quickly access safe zones, refuge rooms, and fire escapes inside complex buildings. These spots are pre-saved for instant retrieval during emergencies." />
     <div className="mx-auto max-w-[1240px] px-5 py-8 md:px-10">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {safeSpots.map((item) => (
-          <div key={item.id} className="border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] rounded-xl p-5 shadow-civic">
+          <div key={item.id} className="border border-card-border bg-card rounded-xl p-5 shadow-civic">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-700 mb-4">
               <ShieldCheck size={20} />
             </div>
             <h3 className="font-display text-lg font-bold">{item.name}</h3>
             <p className="text-xs text-muted-foreground mt-2">{item.note}</p>
-            <div className="mt-6 border-t border-[hsl(var(--border))] pt-3 flex justify-between items-center text-[10px] font-bold text-[hsl(var(--primary))]">
+            <div className="mt-6 border-t border-border pt-3 flex justify-between items-center text-[10px] font-bold text-primary">
               <span>Evacuation Zone</span>
               <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Secure</span>
             </div>
@@ -1610,18 +2611,18 @@ function BuddyPage() {
   };
 
   return <div>
-    <PageHeader eyebrow="Mutual Aid" title={<>Find a Nearby Buddy<br /><span className="text-[hsl(var(--primary))]">for Assistance.</span></>} description="Notify nearby volunteers, security personnel, or community buddies if you require manual navigation assistance, ramp support, or guidance." />
+    <PageHeader eyebrow="Mutual Aid" title={<>Find a Nearby Buddy<br /><span className="text-primary">for Assistance.</span></>} description="Notify nearby volunteers, security personnel, or community buddies if you require manual navigation assistance, ramp support, or guidance." />
     
     <div className="mx-auto max-w-[760px] px-5 py-8 md:px-10">
-      <div className="border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] rounded-xl p-6 shadow-civic text-center">
-        <Users size={40} className="mx-auto mb-4 text-[hsl(var(--primary))]" />
+      <div className="border border-card-border bg-card rounded-xl p-6 shadow-civic text-center">
+        <Users size={40} className="mx-auto mb-4 text-primary" />
         <h3 className="font-display text-xl font-bold">Seek Assistance Now</h3>
         <p className="text-xs text-muted-foreground mt-2 max-w-md mx-auto">Clicking below sends a silent notification with your location to verified nearby users and volunteers.</p>
         
         <button 
           onClick={triggerSeekBuddy} 
           disabled={seekingBuddy}
-          className="mt-6 inline-flex items-center gap-2 bg-[hsl(var(--primary))] text-white font-bold px-6 py-3.5 rounded-xl text-sm shadow-md disabled:opacity-75"
+          className="mt-6 inline-flex items-center gap-2 bg-primary text-white font-bold px-6 py-3.5 rounded-xl text-sm shadow-md disabled:opacity-75"
         >
           {seekingBuddy ? <Loader2 className="animate-spin" /> : <Users size={16} />}
           {seekingBuddy ? "Broadcasting to nearest buddies..." : "Broadcast Buddy Request"}
@@ -1634,9 +2635,9 @@ function BuddyPage() {
           {buddies.map((b, i) => {
             const Icon = b.icon;
             return (
-              <div key={i} className="flex justify-between items-center border border-[hsl(var(--card-border))] bg-[hsl(var(--card))] rounded-xl p-4 shadow-civic">
+              <div key={i} className="flex justify-between items-center border border-card-border bg-card rounded-xl p-4 shadow-civic">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-[hsl(var(--secondary))] flex items-center justify-center text-[hsl(var(--primary))]">
+                  <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center text-primary">
                     <Icon size={20} />
                   </div>
                   <div>
