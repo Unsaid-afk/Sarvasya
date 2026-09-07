@@ -1045,8 +1045,8 @@ function BuildingDetailPage({ building }: { building: any }) {
             </div>
           </section>
 
-          {/* Card 2: Compliance Report */}
-          <ComplianceReportCard report={building.report} />
+          {/* Card 2: Compliance Report & Audit Dossier Action */}
+          <ComplianceReportCard report={building.report} onViewHistory={() => setShowAuditHistoryModal(true)} />
 
           {/* Card 3: Community Complaints for this building */}
           {buildingComplaints.length > 0 && (
@@ -1285,10 +1285,10 @@ function AssistiveView({ building }: { building: any }) {
   );
 }
 
-function ComplianceReportCard({ report }: { report: ComplianceReport }) {
+function ComplianceReportCard({ report, onViewHistory }: { report: ComplianceReport; onViewHistory?: () => void }) {
   return (
-    <section className="glass-card p-5 md:p-7">
-      <div className="flex items-center justify-between mb-5">
+    <section className="glass-card p-5 md:p-7 space-y-4">
+      <div className="flex items-center justify-between">
         <div>
           <div className="font-data text-[10px] uppercase tracking-[.16em] text-[#292524]/60">Compliance report</div>
           <h2 className="mt-1 font-display text-xl font-bold md:text-2xl text-[#292524]">
@@ -1301,12 +1301,25 @@ function ComplianceReportCard({ report }: { report: ComplianceReport }) {
       </div>
 
       <p className="text-sm leading-6 text-muted-foreground">{report.summary}</p>
-      <p className="mt-2 font-data text-[9px] uppercase tracking-wider text-muted-foreground">
-        Checked {new Date(report.checkedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-      </p>
+      
+      <div className="flex items-center justify-between border-t border-border pt-3">
+        <p className="font-data text-[9px] uppercase tracking-wider text-muted-foreground">
+          Checked {new Date(report.checkedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </p>
+        
+        {onViewHistory && (
+          <button
+            onClick={onViewHistory}
+            className="bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow transition"
+          >
+            <ClipboardCheck size={14} />
+            <span>View Full Audit History &amp; Dossier</span>
+          </button>
+        )}
+      </div>
 
       {report.gaps.length > 0 && (
-        <div className="mt-6 border-t border-border pt-5">
+        <div className="mt-4 border-t border-border pt-4">
           <div className="mb-3 font-data text-[10px] uppercase tracking-[.14em] text-muted-foreground font-bold">Open recommendations</div>
           <div className="space-y-0.5">
             {report.gaps.map((gap) => <GapRow gap={gap} key={gap.id} />)}
