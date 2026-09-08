@@ -2312,7 +2312,7 @@ function ComplaintsPage() {
   const [category, setCategory] = useState("Ramp Slope");
   const [details, setDetails] = useState("");
   
-  // Officer mock work variables
+  // Officer complaint workflow state
   const [selectedComplaintId, setSelectedComplaintId] = useState("");
   const [dismissReason, setDismissReason] = useState("");
 
