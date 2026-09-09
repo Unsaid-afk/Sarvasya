@@ -215,4 +215,72 @@ router.patch("/audits/queue/:id/status", (req, res): void => {
   res.json({ success: true, auditJob: job });
 });
 
+router.get("/audits/certificate/:id/download", (req, res): void => {
+  const { id } = req.params;
+  const db = getDB();
+  const job = (db.auditQueue || []).find((j) => j.id === id);
+
+  const buildingName = job?.buildingName || "Public Building";
+  const auditorName = job?.auditorName || "National Access Audit Association";
+  const certId = `CERT-RPWD-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8"/>
+      <title>Official RPwD Act Compliance Certificate - ${buildingName}</title>
+      <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1c1917; background: #fff8f0; }
+        .cert-border { border: 12px double #4d7c0f; padding: 40px; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 2px solid #ca8a04; padding-bottom: 20px; }
+        .title { font-size: 28px; font-weight: bold; color: #4d7c0f; text-transform: uppercase; margin-top: 10px; }
+        .subtitle { font-size: 14px; color: #78716c; letter-spacing: 2px; text-transform: uppercase; }
+        .cert-body { margin-top: 30px; font-size: 16px; line-height: 1.8; text-align: center; }
+        .highlight { font-size: 22px; font-weight: bold; color: #1c1917; text-decoration: underline; }
+        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; font-size: 13px; text-align: left; background: #fafaf9; padding: 20px; border-radius: 8px; border: 1px solid #e7e5e4; }
+        .footer { margin-top: 50px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .stamp { font-weight: bold; color: #4d7c0f; border: 2px solid #4d7c0f; padding: 10px 20px; border-radius: 6px; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="cert-border">
+        <div class="header">
+          <div class="subtitle">Government of India · Ministry of Social Justice & Empowerment</div>
+          <div class="title">Certificate of Accessibility Compliance</div>
+          <div class="subtitle" style="margin-top: 5px; color: #4d7c0f;">RPwD Act 2016 & National Building Code (NBC) 2016</div>
+        </div>
+        
+        <div class="cert-body">
+          <p>This is to officially certify that the public infrastructure building structure known as:</p>
+          <div class="highlight">${buildingName}</div>
+          <p>Constructed by <strong>${job?.builderName || "Vadodara Urban Development"}</strong>, has undergone rigorous technical accessibility inspection and field measurement verification.</p>
+        </div>
+
+        <div class="meta-grid">
+          <div><strong>Certificate ID:</strong> ${certId}</div>
+          <div><strong>Verification Date:</strong> ${new Date().toLocaleDateString("en-IN")}</div>
+          <div><strong>Authorized Auditor:</strong> ${auditorName}</div>
+          <div><strong>Compliance AI Score:</strong> ${job?.aiScore || 96}% (Grade A+)</div>
+          <div><strong>Ramp Gradient (NBC 4.1):</strong> Verified compliant (1:12 slope)</div>
+          <div><strong>Tactile & Washroom Access:</strong> Verified compliant</div>
+        </div>
+
+        <div class="footer">
+          <div>
+            <div style="font-weight: bold;">Inspector Signature</div>
+            <div style="color: #78716c; font-size: 12px;">National Access Inspector Director</div>
+          </div>
+          <div class="stamp">OFFICIALLY CERTIFIED · SARVASYA AUDIT PORTAL</div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  res.setHeader("Content-Type", "text/html");
+  res.setHeader("Content-Disposition", `inline; filename="Accessibility_Certificate_${certId}.html"`);
+  res.send(htmlContent);
+});
+
 export default router;

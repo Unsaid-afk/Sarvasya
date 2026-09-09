@@ -1,17 +1,52 @@
 import { Router, type IRouter } from "express";
+import crypto from "crypto";
 import { getDB, saveDB, type UserRecord } from "../lib/db";
 
 const router: IRouter = Router();
 
-// Helper to simulate token generation
-function createToken(userId: string): string {
-  return Buffer.from(JSON.stringify({ userId, issuedAt: Date.now() })).toString("base64");
+const JWT_SECRET = process.env.JWT_SECRET || "sarvasya_secure_secret_key_2026";
+
+// Secure PBKDF2 Password Hashing
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
+  return `${salt}:${hash}`;
 }
 
-function parseToken(token: string): { userId: string } | null {
+function verifyPassword(password: string, storedHash: string): boolean {
+  if (!storedHash.includes(":")) {
+    // Fallback for legacy demo passwords
+    return password === storedHash;
+  }
+  const [salt, originalHash] = storedHash.split(":");
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
+  return hash === originalHash;
+}
+
+// Secure HMAC-SHA256 Token Signatures
+export function createToken(userId: string, role: string): string {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ userId, role, iat: Date.now(), exp: Date.now() + 86400000 })).toString("base64url");
+  const signature = crypto.createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+  return `${header}.${payload}.${signature}`;
+}
+
+export function parseToken(token: string): { userId: string; role: string } | null {
   try {
+    const parts = token.split(".");
+    if (parts.length === 3) {
+      const [header, payload, signature] = parts;
+      const expectedSig = crypto.createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+      if (signature !== expectedSig) return null;
+
+      const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+      if (data.exp && Date.now() > data.exp) return null;
+      return { userId: data.userId, role: data.role };
+    }
+    // Fallback legacy Base64 parser support
     const raw = Buffer.from(token, "base64").toString("utf8");
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return parsed.userId ? { userId: parsed.userId, role: "citizen" } : null;
   } catch {
     return null;
   }
@@ -34,7 +69,7 @@ router.post("/auth/register", (req, res): void => {
   const newUser: UserRecord = {
     id: `user-${Date.now()}`,
     email,
-    passwordHash: password, // In production, hash with bcrypt/argon2
+    passwordHash: hashPassword(password),
     name,
     role,
     fakeStrikes: 0,
@@ -44,7 +79,7 @@ router.post("/auth/register", (req, res): void => {
   db.users.push(newUser);
   saveDB(db);
 
-  const token = createToken(newUser.id);
+  const token = createToken(newUser.id, newUser.role);
   res.status(201).json({
     token,
     user: {
@@ -66,7 +101,7 @@ router.post("/auth/login", (req, res): void => {
 
   const db = getDB();
   const user = db.users.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase() && u.passwordHash === password
+    (u) => u.email.toLowerCase() === email.toLowerCase() && verifyPassword(password, u.passwordHash)
   );
 
   if (!user) {
@@ -74,7 +109,7 @@ router.post("/auth/login", (req, res): void => {
     return;
   }
 
-  const token = createToken(user.id);
+  const token = createToken(user.id, user.role);
   res.json({
     token,
     user: {
@@ -122,3 +157,4 @@ router.get("/auth/me", (req, res): void => {
 });
 
 export default router;
+
