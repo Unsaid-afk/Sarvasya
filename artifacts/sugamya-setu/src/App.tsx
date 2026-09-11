@@ -893,25 +893,31 @@ function Dashboard() {
   const [status, setStatus] = useState<'all' | 'green' | 'amber' | 'red'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'hospital' | 'government' | 'library'>('all');
   
-  const { data: buildingsData, isLoading, isError, refetch } = useListBuildings({ status, query: query || undefined });
+  const { data: buildingsData, refetch } = useListBuildings();
   const { data: summaryData } = useGetDashboardSummary();
 
-  const sourceBuildings = Array.isArray(buildingsData) && buildingsData.length > 0 
-    ? buildingsData 
-    : VADODARA_PUBLIC_BUILDINGS;
+  // Combine server records with canonical Vadodara dataset (ensuring no duplicates)
+  const sourceBuildings = useMemo(() => {
+    const list = Array.isArray(buildingsData) && buildingsData.length > 0 ? buildingsData : [];
+    const ids = new Set(list.map((b: any) => b.id));
+    const combined = [...list];
+    for (const b of VADODARA_PUBLIC_BUILDINGS) {
+      if (!ids.has(b.id)) {
+        combined.push(b);
+      }
+    }
+    return combined.length > 0 ? combined : VADODARA_PUBLIC_BUILDINGS;
+  }, [buildingsData]);
 
   const filteredBuildings = useMemo(() => {
     const q = query.toLowerCase().trim();
     return sourceBuildings.filter(building => {
       const matchesCategory = categoryFilter === 'all' || building.category === categoryFilter;
       const matchesStatus = status === 'all' || building.status === status;
-      const matchesQuery = !q || `${building.name} ${building.address} ${building.builder}`.toLowerCase().includes(q);
+      const matchesQuery = !q || `${building.name} ${building.address} ${building.builder || ''}`.toLowerCase().includes(q);
       return matchesCategory && matchesStatus && matchesQuery;
     });
   }, [sourceBuildings, categoryFilter, status, query]);
-
-  if (isLoading && !sourceBuildings.length) return <LoadingState />;
-  if (isError && !sourceBuildings.length) return <ErrorState onRetry={refetch} />;
 
   return <div>
     <PageHeader eyebrow="Public Accessibility Directory" title={<>Access for everyone,<br /><span className="text-primary">everywhere.</span></>} description="Explore and verify the accessibility of public buildings across India. Plan your visits with confidence and help us improve public access by sharing your experience.">
