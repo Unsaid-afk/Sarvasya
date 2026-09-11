@@ -36,4 +36,13 @@ router.post("/safe-spots", (req, res): void => {
   res.status(201).json(CreateSafeSpotResponse.parse(newSafeSpot));
 });
 
+router.delete("/safe-spots/:id", (req, res): void => {
+  const db = getDB();
+  const id = req.params.id;
+  db.safeSpots = (db.safeSpots || []).filter((s) => s.id !== id);
+  saveDB(db);
+  res.json({ success: true, id });
+});
+
 export default router;
+

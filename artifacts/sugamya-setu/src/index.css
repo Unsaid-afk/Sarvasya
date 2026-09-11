@@ -189,18 +189,16 @@
 .skeleton { background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--card)) 50%, hsl(var(--muted)) 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 .accessibility-toolbar {
-  position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 40;
+  position: relative;
+  z-index: 9999;
   display: flex;
   align-items: center;
   gap: .35rem;
-  padding: .35rem;
-  border: 1px solid hsl(var(--border));
-  border-radius: .8rem;
-  background: hsl(var(--card) / .96);
-  box-shadow: var(--shadow-md);
+  padding: .4rem .6rem;
+  border: 1.5px solid #292524;
+  border-radius: 1rem;
+  background: #FAFAF9;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(12px);
 }
 .accessibility-toolbar button {
@@ -208,56 +206,114 @@
   align-items: center;
   gap: .35rem;
   border-radius: .55rem;
-  padding: .55rem .7rem;
-  color: hsl(var(--foreground));
+  padding: .5rem .65rem;
+  color: #292524;
+  background: #f0f0ee;
+  border: 1px solid rgba(41, 37, 36, 0.2);
   font-family: var(--app-font-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: .04em;
   text-transform: uppercase;
-  transition: background-color .18s ease, color .18s ease;
+  cursor: pointer;
+  user-select: none;
+  transition: all .15s ease;
 }
-.accessibility-toolbar button:hover,
+.accessibility-toolbar button:hover {
+  background: #4D7C0F;
+  color: #FAFAF9;
+  border-color: #4D7C0F;
+}
 .accessibility-toolbar button[aria-pressed="true"] {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  background: #4D7C0F !important;
+  color: #FAFAF9 !important;
+  border-color: #4D7C0F !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
+
+/* High Contrast Mode - Full WCAG AAA Compliance */
+html.high-contrast,
 .high-contrast {
   --background: 0 0% 100%;
   --foreground: 0 0% 0%;
   --border: 0 0% 0%;
   --card: 0 0% 100%;
   --card-border: 0 0% 0%;
-  --primary: 220 100% 25%;
+  --primary: 0 0% 0%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 55 100% 90%;
+  --secondary: 0 0% 90%;
   --secondary-foreground: 0 0% 0%;
-  --muted-foreground: 0 0% 15%;
-  --ring: 220 100% 35%;
-}
-.color-inverted {
-  filter: invert(1) hue-rotate(180deg);
+  --muted: 0 0% 90%;
+  --muted-foreground: 0 0% 0%;
+  --accent: 0 0% 0%;
+  --accent-foreground: 0 0% 100%;
+  --ring: 0 0% 0%;
 }
 
-/* Colorblind theme styles */
-.colorblind-deuteranopia {
-  --primary: 210 100% 40%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 45 100% 75%;
-  --secondary-foreground: 210 100% 15%;
-  --accent: 35 100% 50%;
-  --accent-foreground: 0 0% 100%;
-  --ring: 210 100% 45%;
+html.high-contrast body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
 }
 
-.colorblind-tritanopia {
-  --primary: 340 85% 45%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 180 60% 80%;
-  --secondary-foreground: 340 85% 15%;
-  --accent: 190 90% 40%;
-  --accent-foreground: 0 0% 100%;
-  --ring: 340 85% 55%;
+html.high-contrast .glass-card,
+html.high-contrast .detail-card,
+html.high-contrast .detail-hero,
+html.high-contrast section,
+html.high-contrast aside,
+html.high-contrast header,
+html.high-contrast footer,
+html.high-contrast div[class*="bg-"],
+html.high-contrast nav {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
+}
+
+html.high-contrast a,
+html.high-contrast button,
+html.high-contrast input,
+html.high-contrast select,
+html.high-contrast textarea {
+  border: 2px solid #000000 !important;
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+html.high-contrast h1,
+html.high-contrast h2,
+html.high-contrast h3,
+html.high-contrast h4,
+html.high-contrast p,
+html.high-contrast span,
+html.high-contrast div {
+  color: #000000 !important;
+}
+
+html.high-contrast .bg-primary,
+html.high-contrast .bg-moss,
+html.high-contrast .bg-ochre {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Invert Mode */
+html.color-inverted {
+  filter: invert(1) hue-rotate(180deg) !important;
+  background-color: #FAFAF9 !important;
+}
+html.color-inverted img,
+html.color-inverted video {
+  filter: invert(1) hue-rotate(180deg) !important;
+}
+
+/* Colorblind theme styles with CSS filters */
+html.colorblind-deuteranopia {
+  filter: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="deuteranopia"><feColorMatrix type="matrix" values="0.625, 0.375, 0, 0, 0 0.7, 0.3, 0, 0, 0 0, 0.3, 0.7, 0, 0 0, 0, 0, 1, 0"/></filter></svg>#deuteranopia');
+}
+
+html.colorblind-tritanopia {
+  filter: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><filter id="tritanopia"><feColorMatrix type="matrix" values="0.95, 0.05, 0, 0, 0 0, 0.433, 0.567, 0, 0 0, 0.475, 0.525, 0, 0 0, 0, 0, 1, 0"/></filter></svg>#tritanopia');
 }
 
 /* Root variable font scaling */
@@ -438,4 +494,52 @@ html.text-size-lg {
 @media (max-width: 767px) {
   /* Push main content up to account for sticky bar */
   .detail-page-content { padding-bottom: 5rem; }
+}
+
+/* WCAG 2.2: Respect prefers-reduced-motion for vestibular & seizure safety */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-pulse,
+  .pulse-emergency,
+  .pulse-voice,
+  .animate-spin,
+  .animate-rise,
+  .skeleton {
+    animation: none !important;
+  }
+}
+
+/* WCAG 2.2 Touch target size accessibility guarantee */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+select {
+  min-height: 38px;
+  min-width: 38px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Screen reader only utility class */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
