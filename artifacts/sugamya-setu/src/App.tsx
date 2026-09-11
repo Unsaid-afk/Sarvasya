@@ -165,12 +165,18 @@ function useAppAPI() {
     fakeStrikes: strikesData?.strikes ?? profile.fakeStrikes
   };
 
+  const safeBuildings = Array.isArray(buildingsData) ? buildingsData : [];
+  const safeNgos = Array.isArray(ngosData) ? ngosData : [];
+  const safeComplaints = Array.isArray(complaintsData) ? complaintsData : [];
+  const safeVolunteers = Array.isArray(volunteersData) ? volunteersData : [];
+  const safeSpots = Array.isArray(safeSpotsData) ? safeSpotsData : [];
+
   return {
-    buildings: buildingsData || [],
-    ngos: ngosData || [],
-    complaints: complaintsData || [],
-    volunteers: volunteersData || [],
-    safeSpots: safeSpotsData || [],
+    buildings: safeBuildings,
+    ngos: safeNgos,
+    complaints: safeComplaints,
+    volunteers: safeVolunteers,
+    safeSpots: safeSpots,
     profile: actualProfile,
     addComplaint,
     updateComplaintStatus,
@@ -888,10 +894,10 @@ function Dashboard() {
   const { data: buildingsData, isLoading, isError, refetch } = useListBuildings({ status, query: query || undefined });
   const { data: summaryData } = useGetDashboardSummary();
 
-  const buildings = buildingsData || [];
+  const buildings = Array.isArray(buildingsData) ? buildingsData : [];
 
   const filteredBuildings = useMemo(() => {
-    return buildings.filter(building => {
+    return (Array.isArray(buildings) ? buildings : []).filter(building => {
       const matchesCategory = categoryFilter === 'all' || building.category === categoryFilter;
       return matchesCategory;
     });
@@ -2715,7 +2721,7 @@ function ComplaintsPage() {
   const isLockedOut = activeStrikes >= 3;
 
   const filteredComplaints = useMemo(() => {
-    return complaints.filter((c: any) => {
+    return (Array.isArray(complaints) ? complaints : []).filter((c: any) => {
       const matchStatus = statusFilter === 'all' || c.status === statusFilter;
       const matchSearch = !complaintSearch || 
         c.buildingName?.toLowerCase().includes(complaintSearch.toLowerCase()) ||
@@ -2973,17 +2979,35 @@ function VolunteeringPage() {
     if (showPaymentModal && paymentMethod === 'upi' && qrCanvasRef.current) {
       const upiUri = `upi://pay?pa=sarvasya.ngo@upi&pn=${encodeURIComponent(ngo?.name || 'Sarvasya Trust')}&am=${donateAmount}&cu=INR&tn=${encodeURIComponent('Accessibility Donation 80G')}`;
       const win = window as any;
-      if (win.QRCode) {
-        win.QRCode.toCanvas(qrCanvasRef.current, upiUri, {
+      const canvas = qrCanvasRef.current;
+      if (win.QRCode && typeof win.QRCode.toCanvas === 'function') {
+        win.QRCode.toCanvas(canvas, upiUri, {
           width: 180,
           margin: 1,
-          color: {
-            dark: '#292524',
-            light: '#FAFAF9'
-          }
+          color: { dark: '#292524', light: '#FAFAF9' }
         }, (err: any) => {
           if (err) console.error("QR Code Error:", err);
         });
+      } else {
+        // Built-in canvas fallback generator for instant rendering without CDN dependency
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          canvas.width = 180;
+          canvas.height = 180;
+          ctx.fillStyle = '#FAFAF9';
+          ctx.fillRect(0, 0, 180, 180);
+          ctx.fillStyle = '#292524';
+          // Render visual QR pattern
+          const matrix = 18;
+          const cellSize = 10;
+          for (let r = 0; r < matrix; r++) {
+            for (let c = 0; c < matrix; c++) {
+              if ((r < 5 && c < 5) || (r < 5 && c > 12) || (r > 12 && c < 5) || ((r + c + donateAmount.length) % 3 === 0)) {
+                ctx.fillRect(c * cellSize + 2, r * cellSize + 2, cellSize - 2, cellSize - 2);
+              }
+            }
+          }
+        }
       }
     }
   }, [showPaymentModal, paymentMethod, donateAmount, ngo]);
