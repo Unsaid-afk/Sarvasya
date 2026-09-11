@@ -21,6 +21,7 @@ import {
 import { Link, Route, Switch, Router as WouterRouter, useLocation, useParams } from 'wouter';
 import NotFound from '@/pages/not-found';
 import { CameraOcrModal } from '@/components/CameraOcrModal';
+import { VADODARA_PUBLIC_BUILDINGS } from '@/data/vadodara-buildings';
 
 const queryClient = new QueryClient();
 
@@ -165,7 +166,7 @@ function useAppAPI() {
     fakeStrikes: strikesData?.strikes ?? profile.fakeStrikes
   };
 
-  const safeBuildings = Array.isArray(buildingsData) ? buildingsData : [];
+  const safeBuildings = Array.isArray(buildingsData) && buildingsData.length > 0 ? buildingsData : VADODARA_PUBLIC_BUILDINGS;
   const safeNgos = Array.isArray(ngosData) ? ngosData : [];
   const safeComplaints = Array.isArray(complaintsData) ? complaintsData : [];
   const safeVolunteers = Array.isArray(volunteersData) ? volunteersData : [];
@@ -895,127 +896,143 @@ function Dashboard() {
   const { data: buildingsData, isLoading, isError, refetch } = useListBuildings({ status, query: query || undefined });
   const { data: summaryData } = useGetDashboardSummary();
 
-  const buildings = Array.isArray(buildingsData) ? buildingsData : [];
+  const sourceBuildings = Array.isArray(buildingsData) && buildingsData.length > 0 
+    ? buildingsData 
+    : VADODARA_PUBLIC_BUILDINGS;
 
   const filteredBuildings = useMemo(() => {
-    return (Array.isArray(buildings) ? buildings : []).filter(building => {
+    const q = query.toLowerCase().trim();
+    return sourceBuildings.filter(building => {
       const matchesCategory = categoryFilter === 'all' || building.category === categoryFilter;
-      return matchesCategory;
+      const matchesStatus = status === 'all' || building.status === status;
+      const matchesQuery = !q || `${building.name} ${building.address} ${building.builder}`.toLowerCase().includes(q);
+      return matchesCategory && matchesStatus && matchesQuery;
     });
-  }, [buildings, categoryFilter]);
+  }, [sourceBuildings, categoryFilter, status, query]);
 
-  if (isLoading) return <LoadingState />;
-  if (isError) return <ErrorState onRetry={refetch} />;
+  if (isLoading && !sourceBuildings.length) return <LoadingState />;
+  if (isError && !sourceBuildings.length) return <ErrorState onRetry={refetch} />;
 
   return <div>
     <PageHeader eyebrow="Public Accessibility Directory" title={<>Access for everyone,<br /><span className="text-primary">everywhere.</span></>} description="Explore and verify the accessibility of public buildings across India. Plan your visits with confidence and help us improve public access by sharing your experience.">
       <Link href="/audit" data-testid="link-start-audit" className="inline-flex items-center gap-2 rounded-2xl bg-[#4D7C0F] px-6 py-3.5 text-sm font-bold text-[#FAFAF9] shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl hover:bg-[#3f650c]">Check a building plan <ChevronRight size={16} /></Link>
     </PageHeader>
     <div className="mx-auto max-w-[1240px] px-5 py-7 md:px-10 md:py-9">
-      {summaryData && typeof summaryData === 'object' && (
+      {summaryData && typeof summaryData === 'object' ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric label="Buildings mapped" value={String(summaryData.buildings ?? 4)} note="Across public jurisdictions" />
-          <Metric label="Verified recently" value={String(summaryData.verified ?? 3)} note="Audited and compliant" accent="bg-[#32805e]" />
-          <Metric label="Open accessibility issues" value={String(summaryData.openGaps ?? 1)} note="Reported by community" accent="bg-[#c28b1b]" />
-          <Metric label="Average rating" value={Number(summaryData.averageRating ?? 4.2).toFixed(1)} note="Updated live from audits" accent="bg-accent" />
+          <Metric label="Buildings mapped" value={String(summaryData.buildings ?? sourceBuildings.length)} note="Across public jurisdictions" />
+          <Metric label="Verified recently" value={String(summaryData.verified ?? sourceBuildings.filter(b => b.audit?.status === 'verified').length)} note="Audited and compliant" accent="bg-[#32805e]" />
+          <Metric label="Open accessibility issues" value={String(summaryData.openGaps ?? sourceBuildings.reduce((acc, b) => acc + (b.report?.gaps?.length || 0), 0))} note="Reported by community" accent="bg-[#c28b1b]" />
+          <Metric label="City average rating" value={String(summaryData.averageRating ?? (sourceBuildings.reduce((acc, b) => acc + b.rating, 0) / sourceBuildings.length).toFixed(1))} note="Score out of 5" accent="bg-[#823b35]" />
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric label="Buildings mapped" value={String(sourceBuildings.length)} note="Across Vadodara, Gujarat" />
+          <Metric label="Verified recently" value={String(sourceBuildings.filter(b => b.audit?.status === 'verified').length)} note="Audited and compliant" accent="bg-[#32805e]" />
+          <Metric label="Open accessibility issues" value={String(sourceBuildings.reduce((acc, b) => acc + (b.report?.gaps?.length || 0), 0))} note="Reported by community" accent="bg-[#c28b1b]" />
+          <Metric label="City average rating" value={(sourceBuildings.reduce((acc, b) => acc + b.rating, 0) / sourceBuildings.length).toFixed(1)} note="Score out of 5" accent="bg-[#823b35]" />
         </div>
       )}
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_300px]">
-        <section className="min-w-0 animate-rise">
-          <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
+        <div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="font-data text-[10px] uppercase tracking-[.18em] text-primary">Open directory</div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Directory</span>
               <h2 className="mt-1 font-display text-3xl font-bold">Public buildings</h2>
             </div>
-            <div className="text-xs text-muted-foreground" aria-live="polite">
+            <div className="font-data text-xs text-muted-foreground">
               {filteredBuildings.length} records in view
             </div>
           </div>
-          
-          <div className="glass-card overflow-hidden">
-            {/* Filters including Hospitals highlight */}
-            <div className="flex flex-col gap-3 border-b border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.5)] p-3 sm:flex-row">
-              <div className="relative flex-1">
-                <Search size={16} aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#292524]/50" />
-                <input data-testid="input-building-search" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search buildings by name, neighbourhood or builder" placeholder="Search building, neighbourhood or builder" className="h-10 w-full rounded-xl border border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.8)] pl-9 pr-3 text-sm outline-none transition-shadow placeholder:text-[#292524]/40 focus:ring-2 focus:ring-[#4D7C0F]/30" />
-              </div>
-              <div className="flex gap-2">
-                <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as any)} aria-label="Filter by building category" className="h-10 rounded-xl border border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.8)] px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#4D7C0F]/30">
-                  <option value="all">All Categories</option>
-                  <option value="hospital">Hospitals (Important)</option>
-                  <option value="government">Government Offices</option>
-                  <option value="library">Libraries</option>
-                </select>
-                <select data-testid="select-building-status" value={status} onChange={(event) => setStatus(event.target.value as typeof status)} aria-label="Filter buildings by compliance status" className="h-10 rounded-xl border border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.8)] px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#4D7C0F]/30">
-                  <option value="all">All statuses</option>
-                  <option value="green">Compliant</option>
-                  <option value="amber">Needs attention</option>
-                  <option value="red">Action required</option>
-                </select>
-              </div>
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#292524]/40" size={15} />
+              <input data-testid="input-building-search" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search buildings by name, neighbourhood or builder" placeholder="Search building, neighbourhood or builder" className="h-10 w-full rounded-xl border border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.8)] pl-9 pr-3 text-sm outline-none transition-shadow placeholder:text-[#292524]/40 focus:ring-2 focus:ring-[#4D7C0F]/30" />
             </div>
-            
-            <div className="hidden grid-cols-[1.45fr_1fr_auto_auto] gap-4 border-b border-[rgba(41,37,36,0.1)] px-4 py-3 font-data text-[9px] uppercase tracking-[.13em] text-[#292524]/60 font-bold bg-[rgba(250,250,249,0.3)] md:grid">
-              <span>Building</span>
-              <span>Builder</span>
-              <span>Accessibility Rating</span>
-              <span>Status</span>
+            <div className="flex gap-2">
+              <select data-testid="select-building-category" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value as typeof categoryFilter)} aria-label="Filter buildings by category" className="h-10 rounded-xl border border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.8)] px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#4D7C0F]/30">
+                <option value="all">All Categories</option>
+                <option value="hospital">Hospitals</option>
+                <option value="government">Government & Civic</option>
+                <option value="library">Libraries</option>
+              </select>
+              <select data-testid="select-building-status" value={status} onChange={(event) => setStatus(event.target.value as typeof status)} aria-label="Filter buildings by compliance status" className="h-10 rounded-xl border border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.8)] px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#4D7C0F]/30">
+                <option value="all">All Statuses</option>
+                <option value="green">Fully Compliant</option>
+                <option value="amber">Minor Issues</option>
+                <option value="red">Attention Required</option>
+              </select>
             </div>
-            
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-2xl border border-[rgba(41,37,36,0.08)] bg-white/75 shadow-sm backdrop-blur">
             {filteredBuildings.length ? filteredBuildings.map((building) => {
-              const dynRating = building.rating || 0;
-              let dynStatus = building.status;
-              if (dynRating >= 4.5) dynStatus = 'green';
-              else if (dynRating >= 3.5) dynStatus = 'amber';
-              else dynStatus = 'red';
+              const activeRating = calculateRating(building, []);
+              let dynamicStatus = building.status;
+              if (activeRating >= 4.5) dynamicStatus = 'green';
+              else if (activeRating >= 3.5) dynamicStatus = 'amber';
+              else dynamicStatus = 'red';
 
               return (
                 <Link key={building.id} href={`/buildings/${building.id}`} className="group grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[rgba(41,37,36,0.05)] px-4 py-4 transition-all hover:bg-[rgba(250,250,249,0.9)] md:grid-cols-[1.45fr_1fr_auto_auto]">
-                  <div className="min-w-0">
+                  <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="truncate text-sm font-bold group-hover:text-primary">{building.name}</h3>
-                      {building.category === 'hospital' && <span className="bg-red-100 text-red-700 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1"><Heart size={10} /> Hospital</span>}
+                      <span className="font-semibold text-[#292524] transition-colors group-hover:text-[#4D7C0F]">{building.name}</span>
+                      {building.category && (
+                        <span className="rounded-full bg-[rgba(41,37,36,0.06)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#292524]/70">
+                          {building.category}
+                        </span>
+                      )}
                     </div>
-                    <p className="mt-1 flex items-center gap-1 truncate text-xs text-muted-foreground"><MapPin size={12} />{building.address}</p>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-[#292524]/60">
+                      <MapPin size={13} className="shrink-0 text-[#292524]/40" />
+                      <span>{building.address}</span>
+                    </div>
                   </div>
-                  <div className="hidden text-xs text-muted-foreground md:block">{building.builder}</div>
-                  <StarRating rating={dynRating} />
-                  <div className="col-span-2 flex items-center justify-between md:col-span-1">
-                    <StatusBadge status={dynStatus} />
-                    <ChevronRight size={17} className="text-muted-foreground transition-transform group-hover:translate-x-1" />
+                  <div className="hidden md:block">
+                    <span className="text-xs text-[#292524]/70">{building.builder}</span>
+                  </div>
+                  <div>
+                    <StarRating rating={activeRating} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={dynamicStatus} />
+                    <ChevronRight size={16} className="text-[#292524]/30 transition-transform group-hover:translate-x-1 group-hover:text-[#4D7C0F]" />
                   </div>
                 </Link>
               );
-            }) : <div className="p-4"><EmptyState query={query} /></div>}
+            }) : <EmptyState query={query} />}
           </div>
-        </section>
+        </div>
 
-        {/* Offline Audit & Fast-track shortcuts */}
-        <aside className="animate-rise">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="font-data text-[10px] uppercase tracking-[.18em] text-primary">Offline Audit</div>
-              <h2 className="mt-1 font-display text-2xl font-bold">Awareness Checklist</h2>
+        <aside className="space-y-4">
+          <div className="rounded-2xl border border-[rgba(41,37,36,0.08)] bg-white/75 p-6 shadow-sm backdrop-blur">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#4D7C0F]">Field Audit Guide</span>
+            <h3 className="mt-1 font-display text-xl font-bold">NBC 2016 Standards</h3>
+            <p className="mt-2 text-xs leading-5 text-[#292524]/70">Indian accessibility standards mandate 1:12 ramp gradients, 900mm clear door openings, Braille-enabled elevators, and 1500mm turning radii in washrooms.</p>
+            <div className="mt-4 space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-[#4D7C0F] font-bold">
+                <Check size={14} /> Max ramp slope: 1:12 (8.33%)
+              </div>
+              <div className="flex items-center gap-2 text-[#4D7C0F] font-bold">
+                <Check size={14} /> Min doorway clear width: 900mm
+              </div>
+              <div className="flex items-center gap-2 text-[#4D7C0F] font-bold">
+                <Check size={14} /> Tactile hazard warning pavers
+              </div>
             </div>
-            <CheckSquare size={17} className="text-muted-foreground" />
-          </div>
-          <div className="glass-card p-5 mb-6">
-            <h3 className="text-sm font-bold mb-3 text-[#292524]">Basic Access Audit Checklist:</h3>
-            <ul className="space-y-3 text-sm">
-              <li className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#4D7C0F] rounded-sm" /> <span className="font-medium text-[#292524]">Ramp slope at/under 1:12 (8.33%)</span></li>
-              <li className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#4D7C0F] rounded-sm" /> <span className="font-medium text-[#292524]">Main doors wide enough (900mm+)</span></li>
-              <li className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#4D7C0F] rounded-sm" /> <span className="font-medium text-[#292524]">Lift buttons with Braille & voice guide</span></li>
-              <li className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#4D7C0F] rounded-sm" /> <span className="font-medium text-[#292524]">Grab rails in toilets & step-free</span></li>
-            </ul>
             <p className="text-[10px] text-[#292524]/50 mt-3 italic font-semibold">Use these guidelines to evaluate public buildings offline.</p>
           </div>
-          
-          <div className="glass-card bg-[#292524]/90 backdrop-blur-2xl p-6 text-[#FAFAF9]">
-            <Compass size={28} className="mb-8 text-[#CA8A04]" />
-            <h3 className="font-display text-2xl font-bold">Safe Spot Shortcuts</h3>
+
+          <div className="rounded-2xl border border-[rgba(41,37,36,0.1)] bg-[#292524] p-6 text-[#FAFAF9] shadow-md">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#CA8A04]">Safety Checklist</span>
+            <h3 className="mt-1 font-display text-xl font-bold">Safe Spots Directory</h3>
             <p className="mt-2 text-sm leading-5 text-[#FAFAF9]/80 font-medium">Instantly look up pre-saved safe evacuation refuges inside buildings.</p>
-            <Link href="/safe-spots" className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#CA8A04] hover:text-[#dcb558] transition-colors">View Safe Spots <ChevronRight size={14} /></Link>
+            <Link href="/safe-spots" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#4D7C0F] px-4 py-2.5 text-xs font-bold text-[#FAFAF9] transition-transform hover:-translate-y-0.5">
+              Open Safe Spots <ChevronRight size={14} />
+            </Link>
           </div>
         </aside>
       </div>
@@ -1028,17 +1045,20 @@ function DetailPage() {
   const { complaints } = useAppAPI();
   const { data: buildingDetail, isLoading, isError, refetch } = useGetBuilding(id);
 
-  if (isLoading) return <div className="mx-auto max-w-[760px] px-5 py-12 md:px-10"><LoadingState label="Loading building details" /></div>;
-  if (isError || !buildingDetail) return <div className="mx-auto max-w-[760px] px-5 py-12 md:px-10"><ErrorState onRetry={refetch} /></div>;
+  const fallbackBuilding = VADODARA_PUBLIC_BUILDINGS.find(b => b.id === id);
+  const activeBuilding = buildingDetail || fallbackBuilding;
+
+  if (isLoading && !activeBuilding) return <div className="mx-auto max-w-[760px] px-5 py-12 md:px-10"><LoadingState label="Loading building details" /></div>;
+  if ((isError || !activeBuilding) && !fallbackBuilding) return <div className="mx-auto max-w-[760px] px-5 py-12 md:px-10"><ErrorState onRetry={refetch} /></div>;
   
-  const dynRating = calculateRating(buildingDetail as any, complaints);
-  let dynStatus = buildingDetail.status;
+  const dynRating = calculateRating(activeBuilding as any, complaints);
+  let dynStatus = activeBuilding.status;
   if (dynRating >= 4.5) dynStatus = 'green';
   else if (dynRating >= 3.5) dynStatus = 'amber';
   else dynStatus = 'red';
 
   const updatedBuilding = {
-    ...buildingDetail,
+    ...activeBuilding,
     rating: dynRating,
     status: dynStatus
   };
@@ -1047,8 +1067,8 @@ function DetailPage() {
 }
 
 function BuildingDetailPage({ building }: { building: any }) {
-  const [selectedWayfinding, setSelectedWayfinding] = useState(building.wayfinding[0]?.id);
-  const selected = building.wayfinding.find((item: any) => item.id === selectedWayfinding);
+  const [selectedWayfinding, setSelectedWayfinding] = useState(building.wayfinding?.[0]?.id || 'entrance');
+  const selected = (building.wayfinding || []).find((item: any) => item.id === selectedWayfinding) || building.wayfinding?.[0];
   const { safeSpots, addSafeSpot, complaints } = useAppAPI();
   const buildingComplaints = complaints.filter(c => c.buildingId === building.id);
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
