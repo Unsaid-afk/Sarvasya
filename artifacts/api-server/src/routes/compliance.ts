@@ -168,6 +168,88 @@ router.post("/audits/forward", (req, res): void => {
 
   if (!db.auditQueue) db.auditQueue = [];
   db.auditQueue.unshift(newAuditJob);
+
+  // Automatically ensure building exists in database so it reflects in Overview
+  const existingIndex = db.buildings.findIndex(
+    (b) => b.name.toLowerCase() === buildingName.toLowerCase() || b.id === buildingName.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+  );
+
+  const buildingId = existingIndex >= 0 
+    ? db.buildings[existingIndex].id 
+    : buildingName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+  const computedBuildingStatus = finalAiReport.score >= 85 ? "green" : finalAiReport.score >= 65 ? "amber" : "red";
+  
+  const auditHistoryEntry = {
+    id: newAuditJob.id,
+    auditorName: "AI Structural Compliance Engine",
+    submittedAt: new Date().toISOString(),
+    status: (finalAiReport.score >= 85 ? "verified" : "rejected") as any,
+    score: finalAiReport.score,
+    summary: finalAiReport.summary,
+    gaps: finalAiReport.gaps,
+    observations: `AI blueprint verification completed. Score: ${finalAiReport.score}/100. Gaps found: ${finalAiReport.gaps?.length || 0}.`
+  };
+
+  if (existingIndex >= 0) {
+    const existing = db.buildings[existingIndex];
+    const prevHistory = existing.auditHistory || [];
+    db.buildings[existingIndex] = {
+      ...existing,
+      builder: builderName || existing.builder,
+      rating: finalAiReport.rating,
+      status: computedBuildingStatus,
+      report: finalAiReport,
+      lastAudit: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+      audit: {
+        id: newAuditJob.id,
+        auditorName: "AI Compliance Check",
+        submittedAt: new Date().toISOString(),
+        status: finalAiReport.score >= 85 ? "verified" : "pending",
+        summary: finalAiReport.summary
+      },
+      auditHistory: [auditHistoryEntry, ...prevHistory]
+    };
+  } else {
+    const newBuildingRecord = {
+      id: buildingId,
+      name: buildingName,
+      address: provisions?.address || `${buildingName}, Vadodara, Gujarat`,
+      builder: builderName,
+      rating: finalAiReport.rating,
+      status: computedBuildingStatus as "green" | "amber" | "red",
+      lastAudit: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+      accessibleFeatures: [
+        provisions?.liftAvailable ? "Braille & Voice-Enabled Elevator Bank" : null,
+        provisions?.accessibleRestrooms ? "NBC 2016 Compliant Wheelchair Restrooms" : null,
+        provisions?.tactilePath ? "Continuous Tactile Guiding Pathway" : null,
+        provisions?.accessibleParking ? "Dedicated Accessible Parking Bay" : null,
+        Number(provisions?.rampSlope || 8.33) <= 8.33 ? "Graded 1:12 Entrance Ramp" : null,
+        Number(provisions?.doorWidth || 900) >= 900 ? "900mm+ Clear Door Openings" : null,
+        provisions?.emergencyRefuge ? "Fire-rated Emergency Refuge Area" : null,
+      ].filter(Boolean) as string[],
+      coordinates: { lat: 22.3072 + (Math.random() - 0.5) * 0.02, lng: 73.1812 + (Math.random() - 0.5) * 0.02 },
+      category: "government" as const,
+      report: finalAiReport,
+      auditor: "AI Access Analyzer & Auditor Queue",
+      audit: {
+        id: newAuditJob.id,
+        auditorName: "AI Compliance Check",
+        submittedAt: new Date().toISOString(),
+        status: finalAiReport.score >= 85 ? "verified" : "pending" as const,
+        summary: finalAiReport.summary
+      },
+      auditHistory: [auditHistoryEntry],
+      wayfinding: [
+        { id: "entrance", label: "Main Entrance Ramp", type: "ramp", status: Number(provisions?.rampSlope || 8.33) <= 8.33 ? "open" : "limited" as const, x: 20, y: 75, note: `Slope: ${provisions?.rampSlope || "8.33"}%` },
+        { id: "lift", label: "Primary Passenger Lift", type: "lift", status: provisions?.liftAvailable ? "open" : "closed" as const, x: 50, y: 40, note: provisions?.liftAvailable ? "Operational elevator" : "No elevator available" },
+        { id: "restroom", label: "Accessible Washroom", type: "restroom", status: provisions?.accessibleRestrooms ? "open" : "limited" as const, x: 80, y: 30, note: provisions?.accessibleRestrooms ? "1500mm turning radius" : "Requires assistance" },
+        { id: "help", label: "Citizen Suvidha Desk", type: "help", status: "open" as const, x: 35, y: 60, note: "Assistance available" }
+      ]
+    };
+    db.buildings.unshift(newBuildingRecord);
+  }
+
   saveDB(db);
 
   res.status(201).json({ success: true, auditJob: newAuditJob });
@@ -192,12 +274,25 @@ router.patch("/audits/queue/:id/status", (req, res): void => {
   if (detailedReport) job.detailedReport = detailedReport;
   job.reviewedAt = new Date().toISOString();
 
-  // If approved or rejected, attach audit history to building record
+  // If approved, rejected, or delayed, update building state and append to full audit history
   if (job.buildingName) {
     const building = db.buildings.find(
-      (b) => b.name.toLowerCase() === job.buildingName.toLowerCase() || b.id === job.buildingId
+      (b) => b.name.toLowerCase() === job.buildingName.toLowerCase() || b.id === job.buildingId || b.id === job.buildingName.toLowerCase().replace(/[^a-z0-9]+/g, "-")
     );
     if (building) {
+      const historyItem = {
+        id: job.id,
+        auditorName: auditorName || job.auditorName || "Inspector Auditor",
+        submittedAt: new Date().toISOString(),
+        status: (status === "approved" ? "verified" : status === "rejected" ? "rejected" : status === "delayed" ? "delayed" : "pending") as any,
+        score: status === "approved" ? Math.max(90, job.aiScore || 90) : status === "rejected" ? Math.min(50, job.aiScore || 50) : job.aiScore,
+        summary: auditorNotes || detailedReport?.detailedObservations || (status === "approved" ? "Official compliance certified." : "Audit remediation requested."),
+        observations: detailedReport?.detailedObservations || auditorNotes,
+      };
+
+      if (!building.auditHistory) building.auditHistory = [];
+      building.auditHistory.unshift(historyItem);
+
       building.audit = {
         id: job.id,
         auditorName: auditorName || job.auditorName || "Inspector Auditor",
@@ -205,8 +300,22 @@ router.patch("/audits/queue/:id/status", (req, res): void => {
         status: status === "approved" ? "verified" : "pending",
         summary: auditorNotes || detailedReport?.detailedObservations || "Field inspection completed.",
       };
+
       if (status === "approved") {
+        building.status = "green";
         building.lastAudit = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+        if (building.report) {
+          building.report.score = Math.max(90, building.report.score);
+          building.report.rating = Number((1 + building.report.score / 25).toFixed(1));
+          building.report.gaps = [];
+          building.report.summary = "All accessibility parameters verified and certified by official access auditor.";
+        }
+      } else if (status === "rejected") {
+        building.status = "red";
+        if (building.report) {
+          building.report.score = Math.min(55, building.report.score);
+          building.report.rating = Number((1 + building.report.score / 25).toFixed(1));
+        }
       }
     }
   }

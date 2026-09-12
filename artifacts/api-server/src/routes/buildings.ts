@@ -7,6 +7,23 @@ import {
   ListBuildingsResponse,
 } from "@workspace/api-zod";
 
+export type AuditHistoryItem = {
+  id: string;
+  auditorName: string;
+  submittedAt: string;
+  status: "verified" | "pending" | "rejected" | "delayed";
+  score?: number;
+  summary: string;
+  gaps?: Array<{
+    id: string;
+    title: string;
+    severity: "critical" | "moderate" | "minor";
+    reference: string;
+    recommendation: string;
+  }>;
+  observations?: string;
+};
+
 export type BuildingRecord = {
   id: string;
   name: string;
@@ -36,9 +53,10 @@ export type BuildingRecord = {
     id: string;
     auditorName: string;
     submittedAt: string;
-    status: "verified" | "pending";
+    status: "verified" | "pending" | "rejected";
     summary: string;
   };
+  auditHistory?: AuditHistoryItem[];
   wayfinding: Array<{
     id: string;
     label: string;

@@ -17,7 +17,7 @@ import {
   Menu, Search, Send, ShieldCheck, Star, X, Volume2, Eye, Contrast, 
   Camera, CameraOff, Navigation, AlertOctagon, Heart, Phone, Users, 
   Mic, User, Shield, HelpCircle, Gift, Calendar, Plus, Map, CheckSquare
-, Bell, CheckCircle2, AlertCircle, Layers, Building2, Grid, List, Sparkles, SlidersHorizontal} from 'lucide-react';
+, Bell, CheckCircle2, AlertCircle, Layers, Building2, Grid, List, Sparkles, SlidersHorizontal, Clock} from 'lucide-react';
 import { Link, Route, Switch, Router as WouterRouter, useLocation, useParams } from 'wouter';
 import NotFound from '@/pages/not-found';
 import { CameraOcrModal } from '@/components/CameraOcrModal';
@@ -1480,16 +1480,56 @@ function BuildingDetailPage({ building }: { building: any }) {
 
           {/* Audit History Timeline */}
           <div className="space-y-3">
-            <h4 className="font-display text-sm font-bold text-primary uppercase tracking-wider">Audit Inspection History</h4>
+            <h4 className="font-display text-sm font-bold text-primary uppercase tracking-wider">Audit Inspection &amp; Recheck History</h4>
             <div className="space-y-3">
-              <div className="p-4 rounded-xl border border-border bg-card space-y-2 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-foreground">{building.audit?.auditorName || "AccessWorks India"}</span>
-                  <span className="text-[10px] text-muted-foreground">{building.lastAudit || building.audit?.submittedAt || "10 Aug 2026"}</span>
+              {Array.isArray(building.auditHistory) && building.auditHistory.length > 0 ? (
+                building.auditHistory.map((item: any, idx: number) => {
+                  const isPass = item.status === 'verified' || item.status === 'approved';
+                  const isFail = item.status === 'rejected';
+                  return (
+                    <div key={item.id || idx} className={`p-4 rounded-xl border space-y-2 text-xs transition-all ${isPass ? 'border-green-300 bg-green-50/50' : isFail ? 'border-red-300 bg-red-50/50' : 'border-border bg-card'}`}>
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-foreground flex items-center gap-1.5">
+                          {isPass ? <CheckCircle2 size={14} className="text-green-600" /> : isFail ? <AlertCircle size={14} className="text-red-600" /> : <Clock size={14} className="text-amber-600" />}
+                          <span>{item.auditorName || "Auditor / AI Inspection"}</span>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{new Date(item.submittedAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                      <p className="text-foreground/80 leading-relaxed font-medium">{item.summary || item.observations || "Inspection record logged."}</p>
+                      {item.score !== undefined && (
+                        <div className="text-[11px] font-semibold text-muted-foreground">
+                          Compliance Score at Review: <strong className={isPass ? 'text-green-700' : isFail ? 'text-red-700' : 'text-amber-700'}>{item.score}/100</strong>
+                        </div>
+                      )}
+                      {Array.isArray(item.gaps) && item.gaps.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-black/5 space-y-1">
+                          <span className="text-[10px] font-bold uppercase text-red-800 tracking-wider">Identified Gaps During Audit:</span>
+                          {item.gaps.map((g: any, gIdx: number) => (
+                            <div key={g.id || gIdx} className="text-[11px] text-red-700 flex items-start gap-1">
+                              <span>•</span>
+                              <span><strong>{g.title}</strong>: {g.recommendation}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-1">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded inline-block uppercase tracking-wider ${isPass ? 'text-green-800 bg-green-100' : isFail ? 'text-red-800 bg-red-100' : 'text-amber-800 bg-amber-100'}`}>
+                          {isPass ? 'Status: Passed & Certified' : isFail ? 'Status: Failed / Remediation Notice' : 'Status: Pending Review'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-4 rounded-xl border border-border bg-card space-y-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-foreground">{building.audit?.auditorName || "National Access Audit Association"}</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">{building.lastAudit || building.audit?.submittedAt || "10 Aug 2026"}</span>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">{building.audit?.summary || "On-site inspection confirmed all accessibility parameters. Ramp slope, elevator keys, and washroom clearances measured."}</p>
+                  <div className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded inline-block">Status: Verified &amp; Certified</div>
                 </div>
-                <p className="text-muted-foreground leading-relaxed">{building.audit?.summary || "On-site inspection confirmed all accessibility parameters. Ramp slope, elevator keys, and washroom clearances measured."}</p>
-                <div className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded inline-block">Status: Verified &amp; Certified</div>
-              </div>
+              )}
             </div>
           </div>
         </div>
