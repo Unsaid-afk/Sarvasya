@@ -231,7 +231,9 @@
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* High Contrast Mode - Full WCAG AAA Compliance */
+/* ==========================================================================
+   High Contrast Mode - Full WCAG AAA Compliance
+   ========================================================================== */
 html.high-contrast,
 .high-contrast {
   --background: 0 0% 100%;
@@ -241,9 +243,9 @@ html.high-contrast,
   --card-border: 0 0% 0%;
   --primary: 0 0% 0%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 90%;
+  --secondary: 0 0% 92%;
   --secondary-foreground: 0 0% 0%;
-  --muted: 0 0% 90%;
+  --muted: 0 0% 92%;
   --muted-foreground: 0 0% 0%;
   --accent: 0 0% 0%;
   --accent-foreground: 0 0% 100%;
@@ -255,6 +257,7 @@ html.high-contrast body {
   color: #000000 !important;
 }
 
+/* Structural containers in High Contrast */
 html.high-contrast .glass-card,
 html.high-contrast .detail-card,
 html.high-contrast .detail-hero,
@@ -262,39 +265,216 @@ html.high-contrast section,
 html.high-contrast aside,
 html.high-contrast header,
 html.high-contrast footer,
-html.high-contrast div[class*="bg-"],
 html.high-contrast nav {
   background-color: #ffffff !important;
   color: #000000 !important;
-  border-color: #000000 !important;
+  border: 2px solid #000000 !important;
   box-shadow: none !important;
 }
 
-html.high-contrast a,
-html.high-contrast button,
-html.high-contrast input,
-html.high-contrast select,
-html.high-contrast textarea {
-  border: 2px solid #000000 !important;
-  color: #000000 !important;
-  font-weight: 800 !important;
-}
-
+/* Typography contrast */
 html.high-contrast h1,
 html.high-contrast h2,
 html.high-contrast h3,
 html.high-contrast h4,
+html.high-contrast h5,
+html.high-contrast h6,
 html.high-contrast p,
-html.high-contrast span,
-html.high-contrast div {
+html.high-contrast label,
+html.high-contrast strong,
+html.high-contrast b {
   color: #000000 !important;
 }
 
-html.high-contrast .bg-primary,
-html.high-contrast .bg-moss,
-html.high-contrast .bg-ochre {
+/* Inputs & Form Controls */
+html.high-contrast input,
+html.high-contrast select,
+html.high-contrast textarea {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+  font-weight: 700 !important;
+}
+
+html.high-contrast input::placeholder,
+html.high-contrast textarea::placeholder {
+  color: #333333 !important;
+  opacity: 1 !important;
+}
+
+/* ── BUTTONS IN HIGH CONTRAST (Guaranteed 100% Visibility Across All Levels) ── */
+
+/* 1. Filled / Dark / Primary / Action / Submit Buttons */
+html.high-contrast button.bg-primary,
+html.high-contrast button[type="submit"],
+html.high-contrast button[class*="bg-[#4D7C0F]"],
+html.high-contrast button[class*="bg-[#292524]"],
+html.high-contrast button[class*="bg-[#32805e]"],
+html.high-contrast button[class*="bg-[#26734e]"],
+html.high-contrast button[class*="bg-[#CA8A04]"],
+html.high-contrast button[class*="bg-red-"],
+html.high-contrast button[class*="bg-blue-"],
+html.high-contrast button[class*="bg-teal-"],
+html.high-contrast button[class*="bg-green-"],
+html.high-contrast a.bg-primary,
+html.high-contrast a[class*="bg-[#4D7C0F]"],
+html.high-contrast a[class*="bg-[#292524]"],
+html.high-contrast a[class*="bg-[#32805e]"],
+html.high-contrast .btn-primary,
+html.high-contrast button[data-testid*="button-evaluate"],
+html.high-contrast button[data-testid*="button-run"] {
+  background-color: #000000 !important;
+  border: 2px solid #000000 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
+}
+
+/* Text and SVG icons inside dark buttons MUST ALWAYS be white */
+html.high-contrast button.bg-primary *,
+html.high-contrast button[type="submit"] *,
+html.high-contrast button[class*="bg-[#4D7C0F]"] *,
+html.high-contrast button[class*="bg-[#292524]"] *,
+html.high-contrast button[class*="bg-[#32805e]"] *,
+html.high-contrast button[class*="bg-[#26734e]"] *,
+html.high-contrast button[class*="bg-[#CA8A04]"] *,
+html.high-contrast button[class*="bg-red-"] *,
+html.high-contrast button[class*="bg-blue-"] *,
+html.high-contrast button[class*="bg-teal-"] *,
+html.high-contrast button[class*="bg-green-"] *,
+html.high-contrast a.bg-primary *,
+html.high-contrast a[class*="bg-[#4D7C0F]"] *,
+html.high-contrast a[class*="bg-[#292524]"] *,
+html.high-contrast a[class*="bg-[#32805e]"] *,
+html.high-contrast .btn-primary *,
+html.high-contrast button[data-testid*="button-evaluate"] *,
+html.high-contrast button[data-testid*="button-run"] * {
+  color: #ffffff !important;
+  fill: currentColor !important;
+}
+
+/* Hover on dark buttons */
+html.high-contrast button.bg-primary:hover,
+html.high-contrast button[type="submit"]:hover,
+html.high-contrast button[class*="bg-[#4D7C0F]"]:hover,
+html.high-contrast button[class*="bg-[#292524]"]:hover,
+html.high-contrast button[class*="bg-[#32805e]"]:hover,
+html.high-contrast button[class*="bg-[#CA8A04]"]:hover,
+html.high-contrast a[class*="bg-[#4D7C0F]"]:hover,
+html.high-contrast a[class*="bg-[#292524]"]:hover {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+}
+html.high-contrast button.bg-primary:hover *,
+html.high-contrast button[type="submit"]:hover *,
+html.high-contrast button[class*="bg-[#4D7C0F]"]:hover *,
+html.high-contrast button[class*="bg-[#292524]"]:hover *,
+html.high-contrast button[class*="bg-[#32805e]"]:hover *,
+html.high-contrast button[class*="bg-[#CA8A04]"]:hover *,
+html.high-contrast a[class*="bg-[#4D7C0F]"]:hover *,
+html.high-contrast a[class*="bg-[#292524]"]:hover * {
+  color: #000000 !important;
+}
+
+/* 2. Standard / Outline / Secondary Buttons */
+html.high-contrast button,
+html.high-contrast a[role="button"],
+html.high-contrast .btn-secondary {
+  background-color: #ffffff !important;
+  border: 2px solid #000000 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+html.high-contrast button *,
+html.high-contrast a[role="button"] *,
+html.high-contrast .btn-secondary * {
+  color: inherit !important;
+}
+
+/* Hover on standard buttons */
+html.high-contrast button:hover {
   background-color: #000000 !important;
   color: #ffffff !important;
+}
+html.high-contrast button:hover * {
+  color: #ffffff !important;
+}
+
+/* 3. Active / Pressed Buttons & Toggles */
+html.high-contrast button[aria-pressed="true"],
+html.high-contrast button[aria-selected="true"],
+html.high-contrast button[role="switch"][aria-checked="true"] {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 3px solid #000000 !important;
+  outline: 2px solid #ffffff !important;
+  outline-offset: -4px !important;
+}
+html.high-contrast button[aria-pressed="true"] *,
+html.high-contrast button[aria-selected="true"] * {
+  color: #ffffff !important;
+}
+
+/* 4. Accessibility Toolbar in High Contrast */
+html.high-contrast .accessibility-toolbar {
+  background-color: #ffffff !important;
+  border: 3px solid #000000 !important;
+}
+html.high-contrast .accessibility-toolbar button {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+}
+html.high-contrast .accessibility-toolbar button[aria-pressed="true"] {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #000000 !important;
+}
+html.high-contrast .accessibility-toolbar button[aria-pressed="true"] * {
+  color: #ffffff !important;
+}
+
+/* 5. Preset Pill Buttons (✓ 100% Pass, ⚠ 75% Partial, ✕ Gaps / Fail) */
+html.high-contrast button[class*="bg-green-"],
+html.high-contrast button[class*="bg-amber-"],
+html.high-contrast button[class*="bg-red-"] {
+  border: 2px solid #000000 !important;
+  font-weight: 800 !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+html.high-contrast button[class*="bg-green-"]:hover,
+html.high-contrast button[class*="bg-amber-"]:hover,
+html.high-contrast button[class*="bg-red-"]:hover {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* 6. Badges & Tags */
+html.high-contrast span[class*="rounded-full"],
+html.high-contrast span[class*="badge"],
+html.high-contrast .status-badge {
+  border: 1.5px solid #000000 !important;
+  font-weight: 800 !important;
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* 7. Switch Toggle Indicator */
+html.high-contrast button[role="switch"] span[class*="rounded-full"] {
+  background-color: #ffffff !important;
+  border: 2px solid #000000 !important;
+}
+html.high-contrast button[role="switch"][aria-checked="true"] span[class*="rounded-full"] {
+  background-color: #ffffff !important;
+  border: 2px solid #000000 !important;
+}
+
+/* 8. Links with high visibility underlines */
+html.high-contrast a {
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
 }
 
 /* Invert Mode */
