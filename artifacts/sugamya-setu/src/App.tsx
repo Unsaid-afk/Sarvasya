@@ -626,13 +626,65 @@ function Shell({ children }: { children: ReactNode }) {
     </aside>
     
     <div className="civic-main">
-      <header className="mobile-nav items-center justify-between bg-sidebar px-4 py-4 text-sidebar-foreground" aria-label="Mobile header">
+      <header className="mobile-nav items-center justify-between bg-sidebar px-4 py-3.5 text-sidebar-foreground border-b border-sidebar-border sticky top-0 z-40 shadow-sm" aria-label="Mobile header">
         <BrandMark />
-        <button type="button" onClick={() => setMenuOpen((v) => !v)} aria-label="Toggle navigation" data-testid="button-toggle-navigation" className="rounded-lg p-2 hover:bg-sidebar-accent">{menuOpen ? <X size={21} /> : <Menu size={21} />}</button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setShowNotifs(!showNotifs)} 
+            aria-label={`Notifications (${unreadCount} unread)`}
+            className="relative p-2 text-sidebar-foreground/80 hover:text-sidebar-foreground rounded-lg hover:bg-sidebar-accent transition-colors"
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && <span className="absolute 1 top-1 right-1 h-3.5 w-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-bold">{unreadCount}</span>}
+          </button>
+          <button 
+            type="button" 
+            onClick={() => setMenuOpen((v) => !v)} 
+            aria-label="Toggle navigation" 
+            data-testid="button-toggle-navigation" 
+            className="rounded-lg p-2 text-sidebar-foreground/90 hover:bg-sidebar-accent transition-colors"
+          >
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </header>
-      {menuOpen && <nav className="mobile-nav flex-col gap-1 bg-sidebar px-4 pb-4 text-sidebar-foreground" aria-label="Mobile navigation">
-        {navItems.map(({ href, label, icon: Icon }) => <Link onClick={() => setMenuOpen(false)} key={href} href={href} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-semibold hover:bg-sidebar-accent"><Icon size={18} />{label}</Link>)}
-      </nav>}
+
+      {menuOpen && (
+        <div className="mobile-nav flex-col bg-sidebar border-b border-sidebar-border px-4 pt-2 pb-5 text-sidebar-foreground animate-rise space-y-3 z-40">
+          {/* User profile row on mobile */}
+          <div className="flex items-center justify-between bg-black/25 rounded-xl p-3 text-xs">
+            <div className="min-w-0 pr-2">
+              <div className="font-bold truncate text-sidebar-foreground">{profile.name || "Guest Citizen"}</div>
+              <div className="text-[10px] text-sidebar-foreground/60 uppercase font-semibold">{profile.role || "citizen"}</div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => { setMenuOpen(false); setShowRegModal(true); }} className="px-2.5 py-1 bg-accent text-accent-foreground rounded text-[11px] font-bold">
+                {profile.name ? 'Profile' : 'Sign In'}
+              </button>
+              {profile.name && (
+                <button onClick={logoutUser} className="text-red-400 text-[11px] font-bold underline px-1">
+                  Logout
+                </button>
+              )}
+            </div>
+          </div>
+
+          <nav className="flex flex-col gap-1" aria-label="Mobile navigation">
+            {navItems.map(({ href, label, icon: Icon }) => (
+              <Link 
+                onClick={() => setMenuOpen(false)} 
+                key={href} 
+                href={href} 
+                className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${location === href ? 'bg-primary text-primary-foreground font-bold shadow-sm' : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'}`}
+              >
+                <Icon size={18} />
+                <span>{label}</span>
+                {location === href && <ChevronRight className="ml-auto opacity-70" size={15} />}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
       
       {/* Voice Hands-Free Bar */}
       {voiceActive && (
@@ -691,15 +743,15 @@ function Shell({ children }: { children: ReactNode }) {
       <main id="main-content" tabIndex={-1} className="outline-none flex-1 pb-16">{children}</main>
       
       {/* Enhanced Accessibility & Assistive Action Toolbars */}
-      <div className="fixed bottom-4 right-4 z-[9999] flex items-end gap-3 pointer-events-auto max-w-[calc(100vw-2rem)]">
+      <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-[9999] flex flex-col items-end gap-2 pointer-events-auto max-w-[calc(100vw-1.5rem)]">
         {showToolbar && (
-          <div id="accessibility-options-toolbar" role="toolbar" aria-label="Accessibility settings and assistive tools" className="accessibility-toolbar relative right-0 bottom-0 mb-0 !static flex-wrap gap-2 md:max-w-4xl shadow-2xl animate-rise border-2 border-primary/40 bg-card">
+          <div id="accessibility-options-toolbar" role="toolbar" aria-label="Accessibility settings and assistive tools" className="accessibility-toolbar flex-wrap gap-1.5 max-w-[92vw] sm:max-w-xl md:max-w-3xl shadow-2xl animate-rise border border-primary/40 bg-card/95 backdrop-blur-md p-2 rounded-2xl">
             {/* Font controls */}
             <div className="flex border-r border-border pr-2 mr-1 items-center gap-1" role="group" aria-label="Text zoom scale">
-              <button type="button" onClick={() => setZoomLevel(z => Math.max(50, z - 10))} aria-label="Decrease text zoom" title="Zoom out"><span className="text-[10px]">A-</span></button>
+              <button type="button" onClick={() => setZoomLevel(z => Math.max(50, z - 10))} aria-label="Decrease text zoom" title="Zoom out" className="h-7 px-2"><span className="text-[10px]">A-</span></button>
               <span className="text-[9px] font-mono px-1 font-bold text-primary" aria-live="polite" aria-atomic="true">{zoomLevel}%</span>
-              <button type="button" onClick={() => setZoomLevel(z => Math.min(200, z + 10))} aria-label="Increase text zoom" title="Zoom in"><span className="text-sm">A+</span></button>
-              <button type="button" onClick={() => setZoomLevel(100)} aria-label="Reset text zoom to 100%" title="Reset zoom" className="ml-1 text-[9px] underline text-muted-foreground hover:text-foreground">Reset</button>
+              <button type="button" onClick={() => setZoomLevel(z => Math.min(200, z + 10))} aria-label="Increase text zoom" title="Zoom in" className="h-7 px-2"><span className="text-xs">A+</span></button>
+              <button type="button" onClick={() => setZoomLevel(100)} aria-label="Reset text zoom to 100%" title="Reset zoom" className="text-[9px] underline text-muted-foreground hover:text-foreground">100%</button>
             </div>
 
             {/* Colorblind Dropdown */}
@@ -707,35 +759,35 @@ function Shell({ children }: { children: ReactNode }) {
               aria-label="Colorblind filter theme selector" 
               value={colorblindTheme} 
               onChange={(e) => setColorblindTheme(e.target.value as any)}
-              className="text-[9px] font-mono font-bold bg-secondary/50 border border-border rounded px-1.5 py-1 outline-none uppercase mr-1"
+              className="text-[9px] font-mono font-bold bg-secondary/70 border border-border rounded px-1.5 py-1 outline-none uppercase mr-1"
             >
-              <option value="none">Colorblind: Off</option>
-              <option value="deuteranopia">Red-Green (Deuteranopia)</option>
-              <option value="tritanopia">Blue-Yellow (Tritanopia)</option>
+              <option value="none">Color: Normal</option>
+              <option value="deuteranopia">Deuteranopia</option>
+              <option value="tritanopia">Tritanopia</option>
             </select>
 
             {/* Standard controls */}
-            <button type="button" onClick={readPage} aria-pressed={reading} className={reading ? "!bg-primary !text-white" : ""} title={reading ? 'Stop reading' : 'Read aloud'}>
-              <Volume2 size={15} aria-hidden="true" /><span>{reading ? "Stop Reading" : "Read Aloud"}</span>
+            <button type="button" onClick={readPage} aria-pressed={reading} className={`h-7 px-2 ${reading ? "!bg-primary !text-white" : ""}`} title={reading ? 'Stop reading' : 'Read aloud'}>
+              <Volume2 size={13} aria-hidden="true" /><span>{reading ? "Stop" : "Speak"}</span>
             </button>
-            <button type="button" onClick={() => setHighContrast((v) => !v)} aria-pressed={highContrast} className={highContrast ? "!bg-black !text-white !border-white" : ""} title="Toggle high contrast">
-              <Contrast size={15} aria-hidden="true" /><span>{highContrast ? "Contrast: ON" : "Contrast"}</span>
+            <button type="button" onClick={() => setHighContrast((v) => !v)} aria-pressed={highContrast} className={`h-7 px-2 ${highContrast ? "!bg-black !text-white !border-white" : ""}`} title="Toggle high contrast">
+              <Contrast size={13} aria-hidden="true" /><span>{highContrast ? "Contrast: ON" : "Contrast"}</span>
             </button>
-            <button type="button" onClick={() => setInverted((v) => !v)} aria-pressed={inverted} className={inverted ? "!bg-primary !text-white" : ""} title="Toggle color inversion">
-              <Eye size={15} aria-hidden="true" /><span>{inverted ? "Inverted: ON" : "Invert"}</span>
+            <button type="button" onClick={() => setInverted((v) => !v)} aria-pressed={inverted} className={`h-7 px-2 ${inverted ? "!bg-primary !text-white" : ""}`} title="Toggle color inversion">
+              <Eye size={13} aria-hidden="true" /><span>{inverted ? "Invert: ON" : "Invert"}</span>
             </button>
 
             {/* Emergency & Tracking buttons */}
-            <button type="button" onClick={triggerEmergency} className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold animate-pulse shadow-md" title="Silent Emergency Alert">
-              <AlertOctagon size={15} aria-hidden="true" /> <span>Emergency</span>
+            <button type="button" onClick={triggerEmergency} className="h-7 px-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-1 font-bold animate-pulse shadow-sm" title="Silent Emergency Alert">
+              <AlertOctagon size={13} aria-hidden="true" /> <span>SOS</span>
             </button>
 
-            <button type="button" onClick={() => setTrackingActive(!trackingActive)} aria-pressed={trackingActive} className={trackingActive ? "bg-blue-700 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold ring-2 ring-blue-400" : "bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold"} title="Toggle Remote Caregiver Tracking">
-              <Users size={15} aria-hidden="true" /> <span>{trackingActive ? "Tracking Active" : "Track Pass"}</span>
+            <button type="button" onClick={() => setTrackingActive(!trackingActive)} aria-pressed={trackingActive} className={`h-7 px-2 rounded-lg flex items-center gap-1 font-bold ${trackingActive ? "bg-blue-700 text-white ring-2 ring-blue-400" : "bg-blue-600 hover:bg-blue-700 text-white"}`} title="Toggle Remote Caregiver Tracking">
+              <Users size={13} aria-hidden="true" /> <span>{trackingActive ? "Tracking" : "Pass"}</span>
             </button>
 
-            <button type="button" onClick={toggleVoiceMode} aria-pressed={voiceActive} className={voiceActive ? "bg-teal-700 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold ring-2 ring-teal-400" : "bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-3 py-2 flex items-center gap-1 font-bold"} title="Toggle hands-free voice control mode">
-              <Mic size={15} aria-hidden="true" /> <span>{voiceActive ? "Voice: Listening" : "Voice Mode"}</span>
+            <button type="button" onClick={toggleVoiceMode} aria-pressed={voiceActive} className={`h-7 px-2 rounded-lg flex items-center gap-1 font-bold ${voiceActive ? "bg-teal-700 text-white ring-2 ring-teal-400" : "bg-teal-600 hover:bg-teal-700 text-white"}`} title="Toggle hands-free voice control mode">
+              <Mic size={13} aria-hidden="true" /> <span>{voiceActive ? "Listening" : "Voice"}</span>
             </button>
           </div>
         )}
@@ -744,13 +796,13 @@ function Shell({ children }: { children: ReactNode }) {
           onClick={() => setShowToolbar(!showToolbar)} 
           aria-expanded={showToolbar}
           aria-controls="accessibility-options-toolbar"
-          className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-primary text-white shadow-2xl transition-transform hover:scale-110"
+          className="flex h-11 w-11 sm:h-12 sm:w-12 flex-none items-center justify-center rounded-full bg-primary text-white shadow-2xl transition-transform hover:scale-105 active:scale-95"
           aria-label="Toggle Accessibility Menu"
           title="Toggle Accessibility Menu"
         >
           <div className="relative flex items-center justify-center w-full h-full">
-             <div className="absolute inset-2 border-2 border-dashed border-white/40 rounded-full animate-spin-slow" aria-hidden="true"></div>
-             <User size={20} strokeWidth={2.5} aria-hidden="true" />
+             <div className="absolute inset-1.5 border border-dashed border-white/40 rounded-full animate-spin-slow" aria-hidden="true"></div>
+             <User size={18} strokeWidth={2.5} aria-hidden="true" />
           </div>
         </button>
       </div>
@@ -826,19 +878,19 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 function PageHeader({ eyebrow, title, description, children }: { eyebrow: string; title: ReactNode; description: string; children?: ReactNode }) {
-  return <section className="detail-hero px-5 py-9 md:px-10 md:py-12 relative overflow-hidden">
+  return <section className="detail-hero px-4 py-6 sm:px-5 sm:py-8 md:px-10 md:py-12 relative overflow-hidden">
     <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-[#4D7C0F]/10 rounded-full blur-3xl pointer-events-none" />
     <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 bg-[#CA8A04]/10 rounded-full blur-3xl pointer-events-none" />
-    <div className="mx-auto flex max-w-[1240px] flex-col gap-6 md:flex-row md:items-end md:justify-between relative z-10">
+    <div className="mx-auto flex max-w-[1240px] flex-col gap-4 sm:gap-6 md:flex-row md:items-end md:justify-between relative z-10">
       <div>
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[rgba(77,124,15,0.2)] bg-[rgba(77,124,15,0.08)] px-3 py-1.5 font-data text-[10px] font-bold uppercase tracking-[.2em] text-[#4D7C0F] shadow-sm backdrop-blur-md">
-          <span className="h-2 w-2 rounded-full bg-[#CA8A04]" />
+        <div className="mb-3 sm:mb-4 inline-flex items-center gap-2 rounded-full border border-[rgba(77,124,15,0.2)] bg-[rgba(77,124,15,0.08)] px-3 py-1 font-data text-[9px] sm:text-[10px] font-bold uppercase tracking-[.2em] text-[#4D7C0F] shadow-sm backdrop-blur-md">
+          <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-[#CA8A04]" />
           {eyebrow}
         </div>
-        <h1 className="font-serif text-4xl font-bold leading-[1.08] tracking-tight text-[#292524] text-balance md:text-5xl lg:text-6xl">{title}</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-6 text-[#292524]/70 md:text-base font-sans">{description}</p>
+        <h1 className="font-serif text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold leading-[1.12] tracking-tight text-[#292524] text-balance">{title}</h1>
+        <p className="mt-2.5 sm:mt-4 max-w-2xl text-xs sm:text-sm md:text-base leading-5 sm:leading-6 text-[#292524]/70 font-sans">{description}</p>
       </div>
-      {children && <div>{children}</div>}
+      {children && <div className="w-full sm:w-auto">{children}</div>}
     </div>
   </section>;
 }
@@ -982,30 +1034,30 @@ function Dashboard() {
               else dynamicStatus = 'red';
 
               return (
-                <Link key={building.id} href={`/buildings/${building.id}`} className="group grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[rgba(41,37,36,0.05)] px-4 py-4 transition-all hover:bg-[rgba(250,250,249,0.9)] md:grid-cols-[1.45fr_1fr_auto_auto]">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-[#292524] transition-colors group-hover:text-[#4D7C0F]">{building.name}</span>
+                <Link key={building.id} href={`/buildings/${building.id}`} className="group flex flex-col sm:grid sm:grid-cols-[1.45fr_1fr_auto_auto] items-start sm:items-center gap-3 sm:gap-4 border-b border-[rgba(41,37,36,0.05)] px-4 py-4 transition-all hover:bg-[rgba(250,250,249,0.9)]">
+                  <div className="w-full min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <span className="font-semibold text-sm sm:text-base text-[#292524] transition-colors group-hover:text-[#4D7C0F]">{building.name}</span>
                       {building.category && (
-                        <span className="rounded-full bg-[rgba(41,37,36,0.06)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#292524]/70">
+                        <span className="rounded-full bg-[rgba(41,37,36,0.06)] px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#292524]/70">
                           {building.category}
                         </span>
                       )}
                     </div>
-                    <div className="mt-1 flex items-center gap-1.5 text-xs text-[#292524]/60">
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-[#292524]/60 truncate">
                       <MapPin size={13} className="shrink-0 text-[#292524]/40" />
-                      <span>{building.address}</span>
+                      <span className="truncate">{building.address}</span>
                     </div>
                   </div>
-                  <div className="hidden md:block">
-                    <span className="text-xs text-[#292524]/70">{building.builder}</span>
+                  <div className="hidden md:block min-w-0">
+                    <span className="text-xs text-[#292524]/70 truncate block">{building.builder}</span>
                   </div>
-                  <div>
+                  <div className="flex items-center justify-between w-full sm:w-auto gap-3 pt-1 sm:pt-0 border-t sm:border-0 border-[rgba(41,37,36,0.04)]">
                     <StarRating rating={activeRating} />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={dynamicStatus} />
-                    <ChevronRight size={16} className="text-[#292524]/30 transition-transform group-hover:translate-x-1 group-hover:text-[#4D7C0F]" />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={dynamicStatus} />
+                      <ChevronRight size={16} className="text-[#292524]/30 transition-transform group-hover:translate-x-1 group-hover:text-[#4D7C0F]" />
+                    </div>
                   </div>
                 </Link>
               );
@@ -1249,40 +1301,40 @@ function BuildingDetailPage({ building }: { building: any }) {
     </div>
 
     {/* ── Hero Section ── */}
-    <section className="detail-hero px-5 py-8 md:px-10 md:py-12">
+    <section className="detail-hero px-4 py-6 sm:px-5 sm:py-8 md:px-10 md:py-12">
       <div className="mx-auto max-w-[1240px]">
-        <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col-reverse sm:flex-row gap-6 sm:gap-8 sm:items-center sm:justify-between">
           {/* Left: Building identity */}
           <div className="animate-rise flex-1 min-w-0">
             <div className="font-data text-[10px] uppercase tracking-[.2em] text-primary">Building record / {building.id}</div>
-            <h1 data-testid="text-building-name" className="mt-3 font-display text-3xl font-bold leading-tight md:text-4xl lg:text-5xl text-balance">{building.name}</h1>
-            <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><MapPin size={15} className="flex-none" />{building.address}</p>
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <h1 data-testid="text-building-name" className="mt-2 sm:mt-3 font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight text-balance">{building.name}</h1>
+            <p className="mt-2 sm:mt-3 flex items-start sm:items-center gap-2 text-xs sm:text-sm text-muted-foreground"><MapPin size={15} className="flex-none mt-0.5 sm:mt-0" /><span>{building.address}</span></p>
+            <div className="mt-4 sm:mt-5 flex flex-wrap items-center gap-2 sm:gap-3">
               <StatusBadge status={building.status} />
               <StarRating rating={building.rating} />
               <button
                 onClick={() => setShowAuditHistoryModal(true)}
-                className="bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow transition"
+                className="bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition"
               >
                 <ClipboardCheck size={14} />
-                <span>View Audit History &amp; Inspector Dossier</span>
+                <span>Audit Dossier</span>
               </button>
             </div>
           </div>
 
           {/* Right: Score ring — visual anchor */}
-          <div className="animate-rise stagger-2 flex flex-col items-center gap-3 flex-none">
+          <div className="animate-rise stagger-2 flex items-center justify-between sm:flex-col sm:justify-center gap-4 flex-none bg-black/5 sm:bg-transparent p-3 sm:p-0 rounded-2xl">
             <div 
-              className="score-ring" 
+              className="score-ring scale-90 sm:scale-100" 
               data-status={building.status}
               style={{ '--score-rotation': `${scoreRotation}deg` } as React.CSSProperties}
               aria-label={`Compliance score: ${building.report.score} out of 100`}
             >
-              <span className="font-display text-4xl font-bold">{building.report.score}</span>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">score</span>
+              <span className="font-display text-3xl sm:text-4xl font-bold">{building.report.score}</span>
+              <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-muted-foreground">score</span>
             </div>
-            <div className="text-center">
-              <div className="font-bold text-sm">{Number(building.report?.rating || 4.2).toFixed(1)} / 5.0</div>
+            <div className="text-right sm:text-center">
+              <div className="font-bold text-sm sm:text-base">{Number(building.report?.rating || 4.2).toFixed(1)} / 5.0</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">{building.report?.gaps?.length ? 'Needs improvement' : 'Fully compliant'}</div>
             </div>
           </div>
