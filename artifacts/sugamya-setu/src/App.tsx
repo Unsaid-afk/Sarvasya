@@ -17,7 +17,7 @@ import {
   Menu, Search, Send, ShieldCheck, Star, X, Volume2, Eye, Contrast, 
   Camera, CameraOff, Navigation, AlertOctagon, Heart, Phone, Users, 
   Mic, User, Shield, HelpCircle, Gift, Calendar, Plus, Map, CheckSquare
-, Bell, CheckCircle2, AlertCircle} from 'lucide-react';
+, Bell, CheckCircle2, AlertCircle, Layers, Building2, Grid, List, Sparkles, SlidersHorizontal} from 'lucide-react';
 import { Link, Route, Switch, Router as WouterRouter, useLocation, useParams } from 'wouter';
 import NotFound from '@/pages/not-found';
 import { CameraOcrModal } from '@/components/CameraOcrModal';
@@ -944,6 +944,9 @@ function Dashboard() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | 'green' | 'amber' | 'red'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'hospital' | 'government' | 'library'>('all');
+  const [viewMode, setViewMode] = useState<'blueprint' | 'directory'>('blueprint');
+  const [selectedBlueprintBuilding, setSelectedBlueprintBuilding] = useState<string>('ssg-hospital');
+  const [activeFloorPoint, setActiveFloorPoint] = useState<string>('entrance');
   
   const { data: buildingsData, refetch } = useListBuildings();
   const { data: summaryData } = useGetDashboardSummary();
@@ -971,14 +974,39 @@ function Dashboard() {
     });
   }, [sourceBuildings, categoryFilter, status, query]);
 
+  const activeBuildingForBlueprint = useMemo(() => {
+    return sourceBuildings.find(b => b.id === selectedBlueprintBuilding) || sourceBuildings[0] || VADODARA_PUBLIC_BUILDINGS[0];
+  }, [sourceBuildings, selectedBlueprintBuilding]);
+
+  const activeCheckpoint = useMemo(() => {
+    return activeBuildingForBlueprint?.wayfinding?.find((w: any) => w.id === activeFloorPoint) || activeBuildingForBlueprint?.wayfinding?.[0];
+  }, [activeBuildingForBlueprint, activeFloorPoint]);
+
   return <div>
-    <PageHeader eyebrow="Public Accessibility Directory" title={<>Access for everyone,<br /><span className="text-primary">everywhere.</span></>} description="Explore and verify the accessibility of public buildings across India. Plan your visits with confidence and help us improve public access by sharing your experience.">
-      <Link href="/audit" data-testid="link-start-audit" className="inline-flex items-center gap-2 rounded-2xl bg-[#4D7C0F] px-6 py-3.5 text-sm font-bold text-[#FAFAF9] shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl hover:bg-[#3f650c]">Check a building plan <ChevronRight size={16} /></Link>
+    <PageHeader 
+      eyebrow="Vadodara Municipal Access Registry" 
+      title={<>Public Landmarks &amp;<br /><span className="text-primary">Interactive Blueprints.</span></>} 
+      description="Inspect verified public facilities, accessible floor plans, wheelchair wayfinding checkpoints, and NBC 2016 audit reports for Vadodara, Gujarat."
+    >
+      <div className="flex flex-wrap gap-2.5">
+        <Link href="/audit" data-testid="link-start-audit" className="inline-flex items-center gap-2 rounded-2xl bg-[#4D7C0F] px-5 py-3 text-xs sm:text-sm font-bold text-[#FAFAF9] shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl hover:bg-[#3f650c]">
+          <FileCheck2 size={16} /> Run Blueprint AI Audit
+        </Link>
+        <button 
+          onClick={() => setViewMode(v => v === 'blueprint' ? 'directory' : 'blueprint')} 
+          className="inline-flex items-center gap-2 rounded-2xl border border-[rgba(41,37,36,0.2)] bg-white/80 px-4 py-3 text-xs sm:text-sm font-bold text-[#292524] shadow-sm transition-all hover:bg-white"
+        >
+          {viewMode === 'blueprint' ? <List size={16} /> : <Layers size={16} />}
+          <span>{viewMode === 'blueprint' ? 'Switch to List' : 'Switch to Blueprint View'}</span>
+        </button>
+      </div>
     </PageHeader>
-    <div className="mx-auto max-w-[1240px] px-5 py-7 md:px-10 md:py-9">
+
+    <div className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6 md:px-10 md:py-9">
+      {/* City Overview Metric Tiles */}
       {summaryData && typeof summaryData === 'object' ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric label="Buildings mapped" value={String(summaryData.buildings ?? sourceBuildings.length)} note="Across public jurisdictions" />
+          <Metric label="Buildings mapped" value={String(summaryData.buildings ?? sourceBuildings.length)} note="Across Vadodara, Gujarat" />
           <Metric label="Verified recently" value={String(summaryData.verified ?? sourceBuildings.filter(b => b.audit?.status === 'verified').length)} note="Audited and compliant" accent="bg-[#32805e]" />
           <Metric label="Open accessibility issues" value={String(summaryData.openGaps ?? sourceBuildings.reduce((acc, b) => acc + (b.report?.gaps?.length || 0), 0))} note="Reported by community" accent="bg-[#c28b1b]" />
           <Metric label="City average rating" value={String(summaryData.averageRating ?? (sourceBuildings.reduce((acc, b) => acc + b.rating, 0) / sourceBuildings.length).toFixed(1))} note="Score out of 5" accent="bg-[#823b35]" />
@@ -992,12 +1020,244 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
+      {/* ── View Toggle & Quick Jump Bar ── */}
+      <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[rgba(41,37,36,0.1)] pb-4">
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#4D7C0F]">Vadodara Civic Catalog</span>
+          <h2 className="mt-0.5 font-display text-2xl sm:text-3xl font-bold text-[#292524]">
+            {viewMode === 'blueprint' ? 'Interactive Blueprint Explorer' : 'Public Buildings Register'}
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-2 bg-[rgba(41,37,36,0.06)] p-1 rounded-xl w-full sm:w-auto">
+          <button 
+            type="button" 
+            onClick={() => setViewMode('blueprint')} 
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'blueprint' ? 'bg-white text-[#292524] shadow-sm' : 'text-[#292524]/60 hover:text-[#292524]'}`}
+          >
+            <Layers size={14} className="text-[#4D7C0F]" />
+            <span>Blueprint Explorer</span>
+          </button>
+          <button 
+            type="button" 
+            onClick={() => setViewMode('directory')} 
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'directory' ? 'bg-white text-[#292524] shadow-sm' : 'text-[#292524]/60 hover:text-[#292524]'}`}
+          >
+            <List size={14} />
+            <span>Directory View</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── INTERACTIVE BLUEPRINT VIEW SECTION ── */}
+      {viewMode === 'blueprint' && (
+        <section className="mt-6 space-y-6 animate-rise" aria-label="Interactive Building Blueprint Explorer">
+          {/* Building Selector Carousel / Pills */}
+          <div>
+            <div className="text-xs font-bold text-[#292524]/70 mb-2 flex items-center gap-1.5">
+              <Building2 size={14} className="text-[#4D7C0F]" />
+              <span>Select Vadodara Landmark to Inspect Blueprint &amp; Route Plans:</span>
+            </div>
+            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin">
+              {sourceBuildings.map((b) => {
+                const isSelected = (activeBuildingForBlueprint.id === b.id);
+                return (
+                  <button
+                    key={b.id}
+                    onClick={() => {
+                      setSelectedBlueprintBuilding(b.id);
+                      setActiveFloorPoint(b.wayfinding?.[0]?.id || 'entrance');
+                    }}
+                    className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all ${
+                      isSelected
+                        ? 'bg-[#292524] text-white border-[#292524] shadow-md scale-[1.02]'
+                        : 'bg-white/80 text-[#292524]/80 border-[rgba(41,37,36,0.1)] hover:bg-white hover:border-[#4D7C0F]/40'
+                    }`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${b.status === 'green' ? 'bg-green-500' : b.status === 'amber' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                    <span>{b.name.split('(')[0].trim()}</span>
+                    <span className="text-[10px] opacity-60">({b.category})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Blueprint Display Card & Details Grid */}
+          <div className="grid gap-6 lg:grid-cols-[1.3fr_.7fr]">
+            {/* Left Blueprint Canvas Container */}
+            <div className="glass-card p-5 md:p-7 border border-[rgba(41,37,36,0.1)] bg-white/85 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-data text-[10px] font-bold uppercase tracking-[.18em] text-[#4D7C0F]">Architectural Floor Plan</span>
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary uppercase">NBC 2016 Compliant</span>
+                  </div>
+                  <h3 className="font-display text-xl sm:text-2xl font-bold text-[#292524] mt-1">{activeBuildingForBlueprint.name}</h3>
+                  <p className="text-xs text-[#292524]/60 mt-0.5 flex items-center gap-1">
+                    <MapPin size={12} className="text-[#CA8A04]" /> {activeBuildingForBlueprint.address}
+                  </p>
+                </div>
+
+                <Link 
+                  href={`/buildings/${activeBuildingForBlueprint.id}`} 
+                  className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-xl bg-[#4D7C0F]/10 border border-[#4D7C0F]/30 px-3.5 py-1.5 text-xs font-bold text-[#4D7C0F] hover:bg-[#4D7C0F] hover:text-white transition-colors"
+                >
+                  <span>Full Building Profile</span>
+                  <ChevronRight size={14} />
+                </Link>
+              </div>
+
+              {/* Blueprint Canvas Box */}
+              <div className="relative aspect-[1.3] sm:aspect-[1.5] w-full overflow-hidden rounded-2xl border-2 border-[#4D7C0F]/30 bg-[#f4f7ee] paper-grid shadow-inner">
+                {/* Blueprint Background Architectural Layout Mock */}
+                <div className="absolute inset-4 rounded-xl border border-dashed border-[#4D7C0F]/20 pointer-events-none" />
+                <div className="absolute left-[10%] top-[12%] h-[30%] w-[35%] rounded-lg border-2 border-[#4D7C0F]/40 bg-white/80 p-2 shadow-sm flex flex-col justify-between">
+                  <span className="text-[9px] font-mono font-bold text-[#4D7C0F] uppercase tracking-wider">Main Reception &amp; Token Hall</span>
+                  <span className="text-[8px] text-[#292524]/50">Clear Corridor: 1500mm</span>
+                </div>
+                <div className="absolute right-[10%] top-[15%] h-[45%] w-[32%] rounded-lg border-2 border-[#4D7C0F]/40 bg-white/80 p-2 shadow-sm flex flex-col justify-between">
+                  <span className="text-[9px] font-mono font-bold text-[#4D7C0F] uppercase tracking-wider">Central Elevator &amp; Stair Core</span>
+                  <span className="text-[8px] text-[#292524]/50">Braille Call Station</span>
+                </div>
+                <div className="absolute bottom-[10%] left-[12%] h-[32%] w-[58%] rounded-lg border-2 border-[#4D7C0F]/40 bg-white/80 p-2 shadow-sm flex flex-col justify-between">
+                  <span className="text-[9px] font-mono font-bold text-[#4D7C0F] uppercase tracking-wider">Accessible Sanitary Facilities &amp; Rest Refuge</span>
+                  <span className="text-[8px] text-[#292524]/50">1600mm Turning Circle</span>
+                </div>
+
+                {/* Tactile guiding path line representation */}
+                <div className="absolute left-[20%] top-[70%] w-[45%] h-1 bg-[#CA8A04]/50 border-t border-b border-[#CA8A04] pointer-events-none" />
+                <div className="absolute left-[65%] top-[40%] w-1 h-[30%] bg-[#CA8A04]/50 border-l border-r border-[#CA8A04] pointer-events-none" />
+
+                {/* Interactive Wayfinding Pin Nodes on the Blueprint */}
+                {activeBuildingForBlueprint.wayfinding?.map((item: any) => {
+                  const isSelected = activeFloorPoint === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveFloorPoint(item.id)}
+                      style={{ left: `${item.x}%`, top: `${item.y}%` }}
+                      aria-label={`${item.label} (${item.status})`}
+                      className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white p-2 shadow-lg transition-all hover:scale-125 focus:outline-none ${
+                        isSelected
+                          ? 'z-20 scale-125 bg-[#4D7C0F] text-white ring-4 ring-[#4D7C0F]/30 animate-pulse'
+                          : item.status === 'open'
+                          ? 'bg-[#32805e] text-white hover:bg-[#256348]'
+                          : item.status === 'limited'
+                          ? 'bg-[#c28b1b] text-white'
+                          : 'bg-[#b74740] text-white'
+                      }`}
+                    >
+                      <MapPin size={15} fill="currentColor" />
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Checkpoint Detail Card */}
+              {activeCheckpoint && (
+                <div className="mt-4 rounded-xl border border-[rgba(41,37,36,0.1)] bg-[rgba(250,250,249,0.9)] p-4 shadow-sm animate-rise">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-[#292524]">{activeCheckpoint.label}</span>
+                      <span className="rounded-full bg-[rgba(41,37,36,0.06)] px-2 py-0.5 font-data text-[9px] font-bold uppercase text-[#292524]/60">
+                        {activeCheckpoint.type}
+                      </span>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                      activeCheckpoint.status === 'open' 
+                        ? 'bg-green-100 text-green-800' 
+                        : activeCheckpoint.status === 'limited' 
+                        ? 'bg-amber-100 text-amber-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {activeCheckpoint.status === 'open' ? 'Fully Accessible' : activeCheckpoint.status === 'limited' ? 'Assisted Access' : 'Restricted'}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-[#292524]/80">{activeCheckpoint.note}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Right Blueprint Analysis & Features Panel */}
+            <div className="space-y-4">
+              {/* Compliance & Rating Score Box */}
+              <div className="glass-card p-5 rounded-2xl border border-[rgba(41,37,36,0.08)] bg-white/80 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-data text-[10px] font-bold uppercase tracking-wider text-[#CA8A04]">Compliance Score</span>
+                  <StatusBadge status={activeBuildingForBlueprint.status} />
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-serif text-4xl font-extrabold text-[#292524]">{activeBuildingForBlueprint.report?.score || 90}</span>
+                  <span className="text-xs text-[#292524]/60">/ 100 NBC 2016 rating</span>
+                </div>
+                <p className="mt-2 text-xs text-[#292524]/70 leading-5">
+                  {activeBuildingForBlueprint.report?.summary}
+                </p>
+              </div>
+
+              {/* Wayfinding Checkpoints Selector List */}
+              <div className="glass-card p-5 rounded-2xl border border-[rgba(41,37,36,0.08)] bg-white/80 shadow-sm">
+                <span className="font-data text-[10px] font-bold uppercase tracking-wider text-[#4D7C0F] block mb-2">Blueprint Keypoints</span>
+                <div className="space-y-1.5">
+                  {activeBuildingForBlueprint.wayfinding?.map((pt: any) => {
+                    const isSelected = activeFloorPoint === pt.id;
+                    return (
+                      <button
+                        key={pt.id}
+                        type="button"
+                        onClick={() => setActiveFloorPoint(pt.id)}
+                        className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-left transition-all ${
+                          isSelected 
+                            ? 'bg-[#4D7C0F] text-white shadow-sm font-bold' 
+                            : 'bg-white/60 text-[#292524] hover:bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <MapPin size={13} className={isSelected ? 'text-white' : 'text-[#CA8A04]'} />
+                          <span className="truncate">{pt.label}</span>
+                        </div>
+                        <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded font-mono ${isSelected ? 'bg-white/20 text-white' : 'bg-black/5 text-[#292524]/60'}`}>
+                          {pt.type}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Quick Jump to All Vadodara Landmarks */}
+              <div className="rounded-2xl border border-[rgba(41,37,36,0.1)] bg-[#292524] p-5 text-[#FAFAF9] shadow-md">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#CA8A04]">Explore Vadodara</span>
+                <h4 className="font-display text-lg font-bold mt-1 text-white">6 Public Landmarks Mapped</h4>
+                <p className="mt-1 text-xs text-[#FAFAF9]/75 leading-5">
+                  Includes SSG Hospital, Khanderao Market VMC HQ, Kuber Bhavan, and Hansa Mehta Central Library.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {sourceBuildings.map(b => (
+                    <Link
+                      key={b.id}
+                      href={`/buildings/${b.id}`}
+                      className="rounded-lg bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-white/20 transition-colors"
+                    >
+                      {b.name.split(' ')[0]} ↗
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── DIRECTORY & SEARCH SECTION (Rendered when in Directory view or below) ── */}
+      <div className={`mt-8 grid gap-8 lg:grid-cols-[1fr_320px] ${viewMode === 'blueprint' ? 'border-t border-[rgba(41,37,36,0.08)] pt-8' : ''}`}>
         <div>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Directory</span>
-              <h2 className="mt-1 font-display text-3xl font-bold">Public buildings</h2>
+              <h2 className="mt-1 font-display text-2xl sm:text-3xl font-bold">Public buildings list</h2>
             </div>
             <div className="font-data text-xs text-muted-foreground">
               {filteredBuildings.length} records in view
