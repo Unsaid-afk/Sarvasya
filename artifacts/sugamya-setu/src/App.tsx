@@ -920,8 +920,25 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   return <div className="rounded-xl border border-[#e3b8b2] bg-[#f9e9e5] p-6 text-[#823b35]" data-testid="state-error"><div className="flex items-center gap-2 font-bold"><CircleAlert size={18} /> Records unavailable</div><p className="mt-2 text-sm">We could not connect to the public register. Please try again.</p><button onClick={onRetry} type="button" data-testid="button-retry" className="mt-4 rounded-lg bg-[#823b35] px-4 py-2 text-xs font-bold text-[#fff8ed] transition-transform hover:-translate-y-0.5">Try again</button></div>;
 }
 
-function EmptyState({ query }: { query?: string }) {
-  return <div className="rounded-xl border border-dashed border-border bg-card/55 p-12 text-center" data-testid="state-empty"><Search className="mx-auto text-muted-foreground" size={28} /><h3 className="mt-4 font-display text-xl font-bold">No buildings found</h3><p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{query ? `Nothing matched “${query}”. Try a neighbourhood or a different status.` : 'The directory is ready for its first verified record.'}</p></div>;
+function EmptyState({ query, onReset }: { query?: string; onReset?: () => void }) {
+  return (
+    <div className="rounded-xl border border-dashed border-border bg-card/55 p-12 text-center" data-testid="state-empty">
+      <Search className="mx-auto text-muted-foreground" size={28} />
+      <h3 className="mt-4 font-display text-xl font-bold">No buildings found</h3>
+      <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+        {query ? `Nothing matched “${query}”. Try a different keyword, neighbourhood, or status.` : 'No buildings match the selected filters.'}
+      </p>
+      {onReset && (
+        <button
+          type="button"
+          onClick={onReset}
+          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#4D7C0F] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#3f650c] transition-all"
+        >
+          Reset All Filters
+        </button>
+      )}
+    </div>
+  );
 }
 
 function StarRating({ rating = 0 }: { rating?: number }) {
@@ -1321,7 +1338,16 @@ function Dashboard() {
                   </div>
                 </Link>
               );
-            }) : <EmptyState query={query} />}
+            }) : (
+              <EmptyState 
+                query={query} 
+                onReset={() => {
+                  setQuery('');
+                  setCategoryFilter('all');
+                  setStatus('all');
+                }} 
+              />
+            )}
           </div>
         </div>
 
