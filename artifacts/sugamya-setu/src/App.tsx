@@ -2005,6 +2005,7 @@ function AuditPage() {
   const [aiAnalysisState, setAiAnalysisState] = useState<'idle' | 'analyzing' | 'completed'>('idle');
   const [aiError, setAiError] = useState('');
   const [forwarded, setForwarded] = useState(false);
+  const [auditMode, setAuditMode] = useState<'ai_scanner' | 'manual_bypass'>('ai_scanner');
   const [form, setForm] = useState({ 
     builderName: '', 
     buildingName: '', 
@@ -2031,6 +2032,191 @@ function AuditPage() {
   const [analysisStatusText, setAnalysisStatusText] = useState<string>('');
   const [detectedFeatures, setDetectedFeatures] = useState<string[]>([]);
   const [uploadedFileObj, setUploadedFileObj] = useState<File | null>(null);
+
+  const applyPreset = (preset: 'compliant' | 'moderate' | 'non_compliant') => {
+    if (preset === 'compliant') {
+      setForm(prev => ({
+        ...prev,
+        rampSlope: '8.33',
+        doorWidth: '950',
+        stepFreeEntrance: true,
+        liftAvailable: true,
+        accessibleRestrooms: true,
+        tactilePath: true,
+        accessibleParking: true,
+        kerbRampsAvailable: true,
+        signageContrast: true,
+        receptionCounterHeight: true,
+        emergencyRefuge: true,
+        inductionLoop: true,
+        washroomAlarmCord: true,
+        visualFireAlarmStrobe: true,
+      }));
+    } else if (preset === 'moderate') {
+      setForm(prev => ({
+        ...prev,
+        rampSlope: '9.80',
+        doorWidth: '880',
+        stepFreeEntrance: true,
+        liftAvailable: true,
+        accessibleRestrooms: true,
+        tactilePath: false,
+        accessibleParking: true,
+        kerbRampsAvailable: true,
+        signageContrast: true,
+        receptionCounterHeight: false,
+        emergencyRefuge: false,
+        inductionLoop: false,
+        washroomAlarmCord: true,
+        visualFireAlarmStrobe: false,
+      }));
+    } else {
+      setForm(prev => ({
+        ...prev,
+        rampSlope: '12.50',
+        doorWidth: '780',
+        stepFreeEntrance: false,
+        liftAvailable: false,
+        accessibleRestrooms: false,
+        tactilePath: false,
+        accessibleParking: false,
+        kerbRampsAvailable: false,
+        signageContrast: false,
+        receptionCounterHeight: false,
+        emergencyRefuge: false,
+        inductionLoop: false,
+        washroomAlarmCord: false,
+        visualFireAlarmStrobe: false,
+      }));
+    }
+  };
+
+  const evaluateChecklist = (targetForm: typeof form): ComplianceReport => {
+    let computedScore = 100;
+    const computedGaps: Gap[] = [];
+
+    if (Number(targetForm.rampSlope) > 8.33) {
+      computedScore -= 18;
+      computedGaps.push({
+        id: 'gap-ramp',
+        title: `Ramp Gradient (${targetForm.rampSlope}%) exceeds 1:12 NBC standard`,
+        severity: 'critical',
+        reference: 'NBC 2016 · 4.1.3',
+        recommendation: 'Reduce entry ramp slope to max 1:12 (8.33%) and install 900mm continuous handrails.'
+      });
+    }
+    if (Number(targetForm.doorWidth) < 900) {
+      computedScore -= 12;
+      computedGaps.push({
+        id: 'gap-door',
+        title: `Clear Door Opening Width (${targetForm.doorWidth}mm) is under 900mm minimum`,
+        severity: 'moderate',
+        reference: 'Harmonised Guidelines 2021 · 4.2',
+        recommendation: 'Widen primary entrance clear door opening to at least 900mm.'
+      });
+    }
+    if (!targetForm.liftAvailable) {
+      computedScore -= 18;
+      computedGaps.push({
+        id: 'gap-lift',
+        title: 'Accessible Vertical Elevator / Lift Missing',
+        severity: 'critical',
+        reference: 'RPwD Act 2016 · Section 41',
+        recommendation: 'Install accessible lift with Braille buttons and multilingual voice synthesizer.'
+      });
+    }
+    if (!targetForm.accessibleRestrooms) {
+      computedScore -= 14;
+      computedGaps.push({
+        id: 'gap-restrooms',
+        title: 'Accessible Restroom Provision Missing',
+        severity: 'critical',
+        reference: 'NBC 2016 · 4.5.4',
+        recommendation: 'Provide unisex accessible washroom with 1500mm turning circle.'
+      });
+    }
+    if (!targetForm.tactilePath) {
+      computedScore -= 10;
+      computedGaps.push({
+        id: 'gap-tactile',
+        title: 'Continuous Tactile Guiding Pathway Missing',
+        severity: 'moderate',
+        reference: 'Harmonised Guidelines 2021 · 3.1',
+        recommendation: 'Lay continuous tactile warning and guiding blocks from site entrance to lobby.'
+      });
+    }
+    if (!targetForm.accessibleParking) {
+      computedScore -= 8;
+      computedGaps.push({
+        id: 'gap-parking',
+        title: 'Dedicated 3.6m Accessible Parking Slot Missing',
+        severity: 'moderate',
+        reference: 'NBC 2016 · 4.2.1',
+        recommendation: 'Reserve at least 2 parking slots near the entry with international symbol and 3.6m width.'
+      });
+    }
+    if (!targetForm.emergencyRefuge) {
+      computedScore -= 12;
+      computedGaps.push({
+        id: 'gap-refuge',
+        title: 'Fire Evacuation Safe Refuge Zone Missing',
+        severity: 'critical',
+        reference: 'NBC 2016 · 4.8.2',
+        recommendation: 'Provide a 2-hour fire rated refuge area on upper floors with emergency intercom.'
+      });
+    }
+    if (!targetForm.washroomAlarmCord) {
+      computedScore -= 6;
+      computedGaps.push({
+        id: 'gap-alarm',
+        title: 'Washroom Emergency Pull-Cord Alarm Missing',
+        severity: 'moderate',
+        reference: 'RPwD Act · Schedule 2',
+        recommendation: 'Install pull-cords at 300mm and 900mm heights inside accessible washrooms.'
+      });
+    }
+    if (!targetForm.stepFreeEntrance) {
+      computedScore -= 10;
+      computedGaps.push({
+        id: 'gap-entrance',
+        title: 'Primary Entrance Lacks Level Step-Free Approach',
+        severity: 'critical',
+        reference: 'NBC 2016 · 4.1.1',
+        recommendation: 'Incorporate level threshold (max 12mm bevel) at primary building entry.'
+      });
+    }
+    if (!targetForm.receptionCounterHeight) {
+      computedScore -= 5;
+      computedGaps.push({
+        id: 'gap-counter',
+        title: 'Help Desk / Reception Counter Height Exceeds 800mm',
+        severity: 'minor',
+        reference: 'Harmonised Guidelines 2021 · 5.3',
+        recommendation: 'Lower at least one section of the service desk counter to 750mm-800mm with knee clearance.'
+      });
+    }
+    if (!targetForm.visualFireAlarmStrobe) {
+      computedScore -= 8;
+      computedGaps.push({
+        id: 'gap-strobe',
+        title: 'Visual Flashing Strobe Light Fire Alarms Missing',
+        severity: 'moderate',
+        reference: 'RPwD Act · Safety Standards',
+        recommendation: 'Install visual strobe light alarms alongside audible sirens for deaf and hard-of-hearing visitors.'
+      });
+    }
+
+    const finalScore = Math.max(15, computedScore);
+    return {
+      score: finalScore,
+      rating: Number((1 + finalScore / 25).toFixed(1)),
+      summary: targetForm.buildingName
+        ? `${auditMode === 'manual_bypass' ? 'Manual Bypass Evaluation' : 'AI Blueprint Analysis'} for ${targetForm.buildingName}: Compliance evaluated against NBC 2016 and RPwD Act 2016.`
+        : 'Accessibility Assessment: Compliance evaluated against NBC 2016 and RPwD Act 2016.',
+      checkedAt: new Date().toISOString(),
+      gaps: computedGaps
+    };
+  };
 
   const analyzeBlueprintImage = async (file: File): Promise<{
     rampSlope: string;
@@ -2158,160 +2344,27 @@ function AuditPage() {
     };
     
     setForm(autoFilledForm);
-
-    const data: ComplianceInput = { 
-      builderName: autoFilledForm.builderName, 
-      buildingName: autoFilledForm.buildingName, 
-      rampSlope: Number(autoFilledForm.rampSlope), 
-      doorWidth: Number(autoFilledForm.doorWidth), 
-      liftAvailable: autoFilledForm.liftAvailable, 
-      accessibleRestrooms: autoFilledForm.accessibleRestrooms, 
-      tactilePath: autoFilledForm.tactilePath, 
-      ...(autoFilledForm.blueprintName ? { blueprintName: autoFilledForm.blueprintName } : {}) 
-    }; 
-
-    // Direct client-side & neural compliance evaluation engine
-    let computedScore = 100;
-    const computedGaps: Gap[] = [];
-
-    if (Number(autoFilledForm.rampSlope) > 8.33) {
-      computedScore -= 18;
-      computedGaps.push({
-        id: 'gap-ramp',
-        title: `Ramp Gradient (${autoFilledForm.rampSlope}%) exceeds 1:12 NBC standard`,
-        severity: 'critical',
-        reference: 'NBC 2016 · 4.1.3',
-        recommendation: 'Reduce entry ramp slope to max 1:12 (8.33%) and install 900mm continuous handrails.'
-      });
-    }
-    if (Number(autoFilledForm.doorWidth) < 900) {
-      computedScore -= 12;
-      computedGaps.push({
-        id: 'gap-door',
-        title: `Clear Door Opening Width (${autoFilledForm.doorWidth}mm) is under 900mm minimum`,
-        severity: 'moderate',
-        reference: 'Harmonised Guidelines 2021 · 4.2',
-        recommendation: 'Widen primary entrance clear door opening to at least 900mm.'
-      });
-    }
-    if (!autoFilledForm.liftAvailable) {
-      computedScore -= 18;
-      computedGaps.push({
-        id: 'gap-lift',
-        title: 'Accessible Vertical Elevator / Lift Missing',
-        severity: 'critical',
-        reference: 'RPwD Act 2016 · Section 41',
-        recommendation: 'Install accessible lift with Braille buttons and multilingual voice synthesizer.'
-      });
-    }
-    if (!autoFilledForm.accessibleRestrooms) {
-      computedScore -= 14;
-      computedGaps.push({
-        id: 'gap-restrooms',
-        title: 'Accessible Restroom Provision Missing',
-        severity: 'critical',
-        reference: 'NBC 2016 · 4.5.4',
-        recommendation: 'Provide unisex accessible washroom with 1500mm turning circle.'
-      });
-    }
-    if (!autoFilledForm.tactilePath) {
-      computedScore -= 10;
-      computedGaps.push({
-        id: 'gap-tactile',
-        title: 'Continuous Tactile Guiding Pathway Missing',
-        severity: 'moderate',
-        reference: 'Harmonised Guidelines 2021 · 3.1',
-        recommendation: 'Lay continuous tactile warning and guiding blocks from site entrance to lobby.'
-      });
-    }
-    if (!autoFilledForm.accessibleParking) {
-      computedScore -= 8;
-      computedGaps.push({
-        id: 'gap-parking',
-        title: 'Dedicated 3.6m Accessible Parking Slot Missing',
-        severity: 'moderate',
-        reference: 'NBC 2016 · 4.2.1',
-        recommendation: 'Reserve at least 2 parking slots near the entry with international symbol and 3.6m width.'
-      });
-    }
-    if (!autoFilledForm.emergencyRefuge) {
-      computedScore -= 12;
-      computedGaps.push({
-        id: 'gap-refuge',
-        title: 'Fire Evacuation Safe Refuge Zone Missing',
-        severity: 'critical',
-        reference: 'NBC 2016 · 4.8.2',
-        recommendation: 'Provide a 2-hour fire rated refuge area on upper floors with emergency intercom.'
-      });
-    }
-    if (!autoFilledForm.washroomAlarmCord) {
-      computedScore -= 6;
-      computedGaps.push({
-        id: 'gap-alarm',
-        title: 'Washroom Emergency Pull-Cord Alarm Missing',
-        severity: 'moderate',
-        reference: 'RPwD Act · Schedule 2',
-        recommendation: 'Install pull-cords at 300mm and 900mm heights inside accessible washrooms.'
-      });
-    }
-    if (!autoFilledForm.stepFreeEntrance) {
-      computedScore -= 10;
-      computedGaps.push({
-        id: 'gap-entrance',
-        title: 'Primary Entrance Lacks Level Step-Free Approach',
-        severity: 'critical',
-        reference: 'NBC 2016 · 4.1.1',
-        recommendation: 'Incorporate level threshold (max 12mm bevel) at primary building entry.'
-      });
-    }
-    if (!autoFilledForm.receptionCounterHeight) {
-      computedScore -= 5;
-      computedGaps.push({
-        id: 'gap-counter',
-        title: 'Help Desk / Reception Counter Height Exceeds 800mm',
-        severity: 'minor',
-        reference: 'Harmonised Guidelines 2021 · 5.3',
-        recommendation: 'Lower at least one section of the service desk counter to 750mm-800mm with knee clearance.'
-      });
-    }
-    if (!autoFilledForm.visualFireAlarmStrobe) {
-      computedScore -= 8;
-      computedGaps.push({
-        id: 'gap-strobe',
-        title: 'Visual Flashing Strobe Light Fire Alarms Missing',
-        severity: 'moderate',
-        reference: 'RPwD Act · Safety Standards',
-        recommendation: 'Install visual strobe light alarms alongside audible sirens for deaf and hard-of-hearing visitors.'
-      });
-    }
-
-    const finalScore = Math.max(15, computedScore);
-    const generatedReport: ComplianceReport = {
-      score: finalScore,
-      rating: Number((1 + finalScore / 25).toFixed(1)),
-      summary: `AI & Neural Structural Analysis for ${autoFilledForm.buildingName || 'Submitted Layout'}: Compliance evaluated against NBC 2016 and RPwD Act 2016 standards.`,
-      checkedAt: new Date().toISOString(),
-      gaps: computedGaps
-    };
-
+    const generatedReport = evaluateChecklist(autoFilledForm);
     setReport(generatedReport);
     setAiAnalysisState('completed');
     setAiError(''); 
   };
 
+  const runManualBypassCheck = (event?: FormEvent) => {
+    if (event) event.preventDefault();
+    if (!form.buildingName.trim() || !form.builderName.trim()) {
+      setAiError('Please enter both Builder / Organisation and Building Name before evaluation.');
+      return;
+    }
+    setAiError('');
+    const generatedReport = evaluateChecklist(form);
+    setReport(generatedReport);
+    setAiAnalysisState('completed');
+  };
+
   const forwardToAuditor = async () => {
     try {
-      // Ensure AI report exists
-      const reportToSubmit = report || {
-        score: Math.max(10, 100 - (Number(form.rampSlope) > 8.33 ? 18 : 0) - (Number(form.doorWidth) < 900 ? 10 : 0) - (!form.liftAvailable ? 18 : 0)),
-        rating: 4.2,
-        summary: `AI Structural Audit Analysis for ${form.buildingName}: Compliance score evaluated against NBC 2016 and RPwD Act 2016.`,
-        gaps: [
-          ...(Number(form.rampSlope) > 8.33 ? [{ id: 'ramp', title: 'Ramp slope exceeds 1:12 NBC standard', severity: 'critical' as const, reference: 'NBC 2016 · 4.1.3', recommendation: 'Reduce ramp gradient to 8.33% with rest landings.' }] : []),
-          ...(!form.liftAvailable ? [{ id: 'lift', title: 'Accessible vertical lift missing', severity: 'critical' as const, reference: 'RPwD Act · Section 41', recommendation: 'Install accessible elevator with Braille & voice prompts.' }] : []),
-        ],
-        checkedAt: new Date().toISOString()
-      };
+      const reportToSubmit = report || evaluateChecklist(form);
 
       await fetch("/api/audits/forward", {
         method: "POST",
@@ -2319,8 +2372,8 @@ function AuditPage() {
         body: JSON.stringify({
           buildingName: form.buildingName,
           builderName: form.builderName,
-          blueprintName: form.blueprintName || "Uploaded_Blueprint.dwg",
-          stage: "blueprint_approval",
+          blueprintName: form.blueprintName || (auditMode === 'manual_bypass' ? "Manual_Checklist_Bypass.pdf" : "Uploaded_Blueprint.dwg"),
+          stage: auditMode === 'manual_bypass' ? "manual_bypass_verification" : "blueprint_approval",
           aiScore: reportToSubmit.score,
           aiReport: reportToSubmit,
           provisions: {
@@ -2337,7 +2390,8 @@ function AuditPage() {
             receptionCounterHeight: form.receptionCounterHeight,
             visualFireAlarmStrobe: form.visualFireAlarmStrobe,
             rampSlope: form.rampSlope,
-            doorWidth: form.doorWidth
+            doorWidth: form.doorWidth,
+            manualBypass: auditMode === 'manual_bypass'
           },
         }),
       });
@@ -2345,7 +2399,7 @@ function AuditPage() {
       console.warn("Could not forward audit job to backend:", err);
     }
     setForwarded(true);
-    addNotification("New Blueprint Submitted", `Builder ${form.builderName} submitted ${form.buildingName}. Nearby auditors notified for review.`, "success");
+    addNotification("New Blueprint Submitted", `Builder ${form.builderName} submitted ${form.buildingName} (${auditMode === 'manual_bypass' ? 'Manual Bypass Mode' : 'AI Scanner'}). Nearby auditors notified.`, "success");
   };
 
   const resetAudit = () => {
@@ -2355,20 +2409,101 @@ function AuditPage() {
     setForm(current => ({ ...current, blueprintName: '' }));
   };
 
-  if (forwarded) return <div className="mx-auto max-w-[720px] px-5 py-16 md:px-10"><div className="animate-rise rounded-2xl border border-[#b9d6c3] bg-[#edf7ef] p-8 text-center shadow-civic"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32805e] text-white"><Check size={27} /></div><div className="mt-5 font-data text-[10px] uppercase tracking-[.18em] text-[#26734e]">Audit Received</div><h1 className="mt-2 font-display text-4xl font-bold text-[#173b2c]">Blueprint Forwarded to Auditor.</h1><p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[#426b55]">Your AI-verified blueprint will now be checked by a human auditor before final approval.</p><button type="button" onClick={resetAudit} className="mt-7 rounded-lg bg-[#26734e] px-5 py-3 text-sm font-bold text-white">Check another blueprint</button></div></div>;
+  if (forwarded) return <div className="mx-auto max-w-[720px] px-5 py-16 md:px-10"><div className="animate-rise rounded-2xl border border-[#b9d6c3] bg-[#edf7ef] p-8 text-center shadow-civic"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#32805e] text-white"><Check size={27} /></div><div className="mt-5 font-data text-[10px] uppercase tracking-[.18em] text-[#26734e]">Audit Received</div><h1 className="mt-2 font-display text-4xl font-bold text-[#173b2c]">Blueprint Forwarded to Auditor.</h1><p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[#426b55]">Your {auditMode === 'manual_bypass' ? 'manual checklist bypass submission' : 'AI-verified blueprint'} will now be checked by a human auditor before final approval.</p><button type="button" onClick={resetAudit} className="mt-7 rounded-lg bg-[#26734e] px-5 py-3 text-sm font-bold text-white">Check another blueprint</button></div></div>;
 
   return <div>
     <PageHeader eyebrow="Architect's Compliance Workspace" title={<>Check the layout<br /><span className="text-primary">before building.</span></>} description="Quickly test your blueprint dimensions and structural facilities against official NBC 2016 and RPwD Act standards before submission." />
-    <div className="mx-auto grid max-w-[1240px] gap-8 px-5 py-8 md:px-10 lg:grid-cols-[1fr_380px]">
-      <form onSubmit={runAiAnalysis} className="rounded-xl border border-card-border bg-card p-5 shadow-civic md:p-7">
-        <div className="mb-7 flex items-center gap-3 border-b border-border pb-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary">
-            <FileCheck2 size={18} />
+    
+    <div className="mx-auto max-w-[1240px] px-5 pt-4 md:px-10">
+      {/* Mode Switcher Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-[rgba(41,37,36,0.12)] bg-white/90 p-3.5 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <div className={`p-2 rounded-xl text-white ${auditMode === 'manual_bypass' ? 'bg-[#CA8A04]' : 'bg-[#4D7C0F]'}`}>
+            {auditMode === 'manual_bypass' ? <SlidersHorizontal size={18} /> : <FileCheck2 size={18} />}
           </div>
           <div>
-            <h2 className="font-display text-2xl font-bold">AI Blueprint Analysis</h2>
-            <p className="text-xs text-muted-foreground">Automatically check layout parameters against NBC 2016 &amp; Harmonised Guidelines.</p>
+            <span className="font-bold text-xs text-[#292524]">
+              {auditMode === 'manual_bypass' ? 'Manual AI Checklist Bypass Mode' : 'Automated AI Blueprint Scanner'}
+            </span>
+            <p className="text-[11px] text-[#292524]/65">
+              {auditMode === 'manual_bypass' 
+                ? 'Configure and verify all 12 accessibility provisions directly without CAD/OCR scanning.' 
+                : 'Upload CAD/DWG/PDF drawing for neural OCR and automated guideline extraction.'}
+            </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 bg-[rgba(41,37,36,0.06)] p-1 rounded-xl w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setAuditMode('ai_scanner');
+              if (aiAnalysisState === 'completed' && !report) setAiAnalysisState('idle');
+            }}
+            className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${auditMode === 'ai_scanner' ? 'bg-white text-[#292524] shadow-sm' : 'text-[#292524]/60 hover:text-[#292524]'}`}
+          >
+            AI Scanner
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAuditMode('manual_bypass');
+              setAiError('');
+            }}
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${auditMode === 'manual_bypass' ? 'bg-[#CA8A04] text-white shadow-sm' : 'text-[#292524]/60 hover:text-[#292524]'}`}
+          >
+            <Sparkles size={13} />
+            <span>Manual Bypass</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div className="mx-auto grid max-w-[1240px] gap-8 px-5 py-6 md:px-10 lg:grid-cols-[1fr_380px]">
+      <form onSubmit={auditMode === 'manual_bypass' ? runManualBypassCheck : runAiAnalysis} className="rounded-xl border border-card-border bg-card p-5 shadow-civic md:p-7">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-primary">
+              <FileCheck2 size={18} />
+            </div>
+            <div>
+              <h2 className="font-display text-2xl font-bold">
+                {auditMode === 'manual_bypass' ? 'Manual Blueprint Checklist Bypass' : 'AI Blueprint Analysis'}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {auditMode === 'manual_bypass' 
+                  ? 'Manual verification override: Test NBC 2016 parameters directly.' 
+                  : 'Automatically check layout parameters against NBC 2016 & Harmonised Guidelines.'}
+              </p>
+            </div>
+          </div>
+
+          {auditMode === 'manual_bypass' && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase mr-1">Presets:</span>
+              <button
+                type="button"
+                onClick={() => applyPreset('compliant')}
+                className="px-2.5 py-1 rounded-lg bg-green-50 text-green-800 border border-green-200 text-[10px] font-bold hover:bg-green-100 transition-colors"
+              >
+                ✓ 100% Pass
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPreset('moderate')}
+                className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold hover:bg-amber-100 transition-colors"
+              >
+                ⚠ 75% Partial
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPreset('non_compliant')}
+                className="px-2.5 py-1 rounded-lg bg-red-50 text-red-800 border border-red-200 text-[10px] font-bold hover:bg-red-100 transition-colors"
+              >
+                ✕ Gaps / Fail
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
@@ -2376,23 +2511,39 @@ function AuditPage() {
           <Field label="Building Name" value={form.buildingName} onChange={(v) => update('buildingName', v)} placeholder="e.g. Ward office, Sector 12" testId="input-building-name" required />
         </div>
 
-        <div className="mt-6">
-          <label htmlFor="blueprint" className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-primary/45 bg-secondary/32 p-5 text-center transition-colors hover:bg-secondary">
-            <FileUp size={22} className="text-primary" />
-            <span className="mt-2 text-xs font-bold">{form.blueprintName || 'Attach Blueprint Reference (DWG, PDF, Plan)'}</span>
-            <span className="mt-1 text-[10px] text-muted-foreground">Required for AI verification</span>
-            <input id="blueprint" type="file" className="sr-only" data-testid="input-blueprint" onChange={(event) => {
-               const file = event.target.files?.[0];
-               if (file) {
-                 setUploadedFileObj(file);
-                 update('blueprintName', file.name);
-               }
-               if (aiAnalysisState === 'completed') setAiAnalysisState('idle'); // reset if new file uploaded
-            }} />
-          </label>
-        </div>
+        {auditMode === 'ai_scanner' ? (
+          <div className="mt-6">
+            <label htmlFor="blueprint" className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-primary/45 bg-secondary/32 p-5 text-center transition-colors hover:bg-secondary">
+              <FileUp size={22} className="text-primary" />
+              <span className="mt-2 text-xs font-bold">{form.blueprintName || 'Attach Blueprint Reference (DWG, PDF, Plan)'}</span>
+              <span className="mt-1 text-[10px] text-muted-foreground">Required for AI verification</span>
+              <input id="blueprint" type="file" className="sr-only" data-testid="input-blueprint" onChange={(event) => {
+                 const file = event.target.files?.[0];
+                 if (file) {
+                   setUploadedFileObj(file);
+                   update('blueprintName', file.name);
+                 }
+                 if (aiAnalysisState === 'completed') setAiAnalysisState('idle'); // reset if new file uploaded
+              }} />
+            </label>
+          </div>
+        ) : (
+          <div className="mt-5 rounded-xl border border-[#CA8A04]/20 bg-[#CA8A04]/5 p-3.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs text-[#292524]">
+              <Sparkles size={15} className="text-[#CA8A04] shrink-0" />
+              <span><strong>Manual Bypass Active:</strong> You can edit and test all parameters below immediately.</span>
+            </div>
+            <label className="cursor-pointer text-[11px] font-bold text-[#4D7C0F] hover:underline shrink-0">
+              <span>{form.blueprintName ? `File: ${form.blueprintName}` : '+ Attach optional drawing'}</span>
+              <input type="file" className="sr-only" onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) update('blueprintName', f.name);
+              }} />
+            </label>
+          </div>
+        )}
 
-        {detectedFeatures.length > 0 && (
+        {detectedFeatures.length > 0 && auditMode === 'ai_scanner' && (
           <div className="mt-4 p-3 bg-secondary/50 rounded-lg border border-border">
             <span className="text-[11px] font-bold text-primary uppercase tracking-wider block mb-1.5">Visual Layout Features Detected:</span>
             <div className="flex flex-wrap gap-1.5">
@@ -2405,14 +2556,19 @@ function AuditPage() {
           </div>
         )}
 
-        {aiAnalysisState === 'completed' && (
+        {(aiAnalysisState === 'completed' || auditMode === 'manual_bypass') && (
           <>
             <div className="grid gap-5 sm:grid-cols-2 mt-6">
-              <Field label="Entry Ramp Slope (AI Checked)" suffix="%" type="number" value={form.rampSlope} onChange={(v) => update('rampSlope', v)} testId="input-ramp-slope" />
-              <Field label="Clear Door Opening Width (AI Checked)" suffix="mm" type="number" value={form.doorWidth} onChange={(v) => update('doorWidth', v)} testId="input-door-width" />
+              <Field label="Entry Ramp Slope" suffix="%" type="number" value={form.rampSlope} onChange={(v) => update('rampSlope', v)} testId="input-ramp-slope" />
+              <Field label="Clear Door Opening Width" suffix="mm" type="number" value={form.doorWidth} onChange={(v) => update('doorWidth', v)} testId="input-door-width" />
             </div>
             <div className="mt-7 space-y-3.5 border-t border-border pt-6">
-              <h3 className="font-display text-sm font-bold text-primary mb-3 uppercase tracking-wider">AI Access Provisions Checklist</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-sm font-bold text-primary uppercase tracking-wider">
+                  {auditMode === 'manual_bypass' ? 'Manual NBC 2016 Accessibility Checklist' : 'AI Access Provisions Checklist'}
+                </h3>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">12 Standard Checks</span>
+              </div>
               <Toggle label="Step-Free Entrance Level Approach (Max 12mm Threshold)" checked={form.stepFreeEntrance} onChange={(v) => update('stepFreeEntrance', v)} testId="toggle-step-free" />
               <Toggle label="Lift available and operational with Braille & Voice" checked={form.liftAvailable} onChange={(v) => update('liftAvailable', v)} testId="toggle-lift" />
               <Toggle label="Accessible restroom on every public floor" checked={form.accessibleRestrooms} onChange={(v) => update('accessibleRestrooms', v)} testId="toggle-restrooms" />
@@ -2429,30 +2585,58 @@ function AuditPage() {
           </>
         )}
 
-
-        {aiAnalysisState !== 'completed' ? (
-          <button disabled={aiAnalysisState === 'analyzing'} type="submit" data-testid="button-run-compliance" className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70">
-            {aiAnalysisState === 'analyzing' ? <><Loader2 size={16} className="animate-spin" />{analysisStatusText || 'Analyzing blueprint via AI…'}</> : <><ShieldCheck size={16} />Analyze Blueprint with AI</>}
-          </button>
-        ) : (
-          <div className="mt-8 space-y-4">
-            {report && report.score < 95 ? (
-              <div className="rounded-lg bg-[#a53f3a]/10 p-4 text-[#a53f3a] border border-[#a53f3a]/20 text-sm">
-                <strong>Cannot Forward:</strong> Blueprint compliance is below 95% (Current Score: {report.score}%). Please fix the identified gaps and re-analyze.
-              </div>
-            ) : (
-              <button type="button" onClick={forwardToAuditor} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#32805e] px-5 py-3.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 shadow-md">
-                Forward to Auditor
+        {auditMode === 'manual_bypass' ? (
+          <div className="mt-8 space-y-3">
+            <button
+              type="submit"
+              data-testid="button-evaluate-manual"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#CA8A04] px-5 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-[#a87303] hover:-translate-y-0.5"
+            >
+              <Sparkles size={16} />
+              <span>Evaluate Manual Checklist &amp; Compute NBC Score</span>
+            </button>
+            {report && (
+              <button
+                type="button"
+                onClick={forwardToAuditor}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#32805e] px-5 py-3.5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 shadow-md"
+              >
+                <Check size={16} />
+                <span>Forward Manual Checklist to Auditor Queue</span>
               </button>
             )}
           </div>
+        ) : (
+          <>
+            {aiAnalysisState !== 'completed' ? (
+              <button disabled={aiAnalysisState === 'analyzing'} type="submit" data-testid="button-run-compliance" className="mt-8 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70">
+                {aiAnalysisState === 'analyzing' ? <><Loader2 size={16} className="animate-spin" />{analysisStatusText || 'Analyzing blueprint via AI…'}</> : <><ShieldCheck size={16} />Analyze Blueprint with AI</>}
+              </button>
+            ) : (
+              <div className="mt-8 space-y-4">
+                {report && report.score < 95 ? (
+                  <div className="rounded-lg bg-[#a53f3a]/10 p-4 text-[#a53f3a] border border-[#a53f3a]/20 text-sm">
+                    <strong>Cannot Forward:</strong> Blueprint compliance is below 95% (Current Score: {report.score}%). Please fix the identified gaps and re-analyze or use Manual Bypass.
+                  </div>
+                ) : (
+                  <button type="button" onClick={forwardToAuditor} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#32805e] px-5 py-3.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 shadow-md">
+                    Forward to Auditor
+                  </button>
+                )}
+              </div>
+            )}
+          </>
         )}
-        {aiError && <p data-testid="text-compliance-error" className="mt-3 text-center text-xs text-[#a53f3a]">{aiError}</p>}
+
+        {aiError && <p data-testid="text-compliance-error" className="mt-3 text-center text-xs text-[#a53f3a] font-bold">{aiError}</p>}
       </form>
 
       <div className="lg:pt-1">
         {report ? <div className="animate-rise">
-          <div className="mb-3 font-data text-[10px] uppercase tracking-[.18em] text-primary">Audit Report / Result</div>
+          <div className="mb-3 flex items-center justify-between font-data text-[10px] uppercase tracking-[.18em] text-primary">
+            <span>Audit Report / Result</span>
+            {auditMode === 'manual_bypass' && <span className="rounded bg-[#CA8A04]/10 px-1.5 py-0.5 text-[#CA8A04] font-bold">Manual Bypass</span>}
+          </div>
           <ComplianceReportCard report={report} />
           <button type="button" onClick={resetAudit} data-testid="button-new-compliance" className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-bold hover:bg-secondary">
             <ClipboardCheck size={15} />Reset and Check Another
